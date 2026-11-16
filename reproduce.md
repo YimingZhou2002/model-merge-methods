@@ -108,30 +108,45 @@ not require GPUs or launch AppWorld.
 
 From the repository root, set short IPC/cache paths and run the complete frozen
 study. It evaluates all eight source checkpoints first, freezes the MMR bank,
-exports the four merge/control models, and evaluates them sequentially.
+exports the four merge/control models, and evaluates them sequentially. The
+checked-in config points at the preserved completed run, whose receipts are
+intentionally verified/reused by the controller rather than sampled again.
 
 ```bash
-export VLLM_RPC_BASE_PATH="$(dirname "$PWD")/r/ipc14"
-export VLLM_CACHE_ROOT="$(dirname "$PWD")/runtime/cache/vllm-14b-v2"
+WORKSPACE="$(dirname "$PWD")"
+NEW_RUN="runs/qwen3-14b-dev8-v2-repro"
+python - "$PWD/research/checkpoint_merge_14b/config.json" "/tmp/tsg-mmr-repro.json" "$NEW_RUN" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+data["run_root"] = sys.argv[3]
+data["study"] = "qwen3-14b-mmr-tsg-dev8-repro"
+data["ray_namespace"] = 1400
+json.dump(data, open(sys.argv[2], "w"), indent=2)
+PY
 
-../envs/eval/bin/python -m research.checkpoint_merge_14b.study preflight
-../envs/eval/bin/python -m research.checkpoint_merge_14b.study run
+mkdir -p "$WORKSPACE/r/e15" "$WORKSPACE/$NEW_RUN"
+ln -s "$WORKSPACE/r/e15" "$WORKSPACE/$NEW_RUN/evaluations"
+export VLLM_RPC_BASE_PATH="$WORKSPACE/r/ipc15"
+export VLLM_CACHE_ROOT="$WORKSPACE/runtime/cache/vllm-14b-v2-repro"
+
+../envs/eval/bin/python -m research.checkpoint_merge_14b.study preflight \
+  --config /tmp/tsg-mmr-repro.json --workspace "$WORKSPACE"
+../envs/eval/bin/python -m research.checkpoint_merge_14b.study run \
+  --config /tmp/tsg-mmr-repro.json --workspace "$WORKSPACE"
 ```
 
 The checked-in config is [`research/checkpoint_merge_14b/config.json`](research/checkpoint_merge_14b/config.json).
-For a fresh independent rerun, copy it to a new config, set `run_root` to a new
-workspace `runs/` directory, and use a fresh short physical output directory
-under `r/` (create `runs/<new-run>/evaluations` as a symlink to it). Preserve all
-other settings to match the original protocol. Do not point a new run at the
-completed result directory: the controller intentionally verifies and reuses
-completed cells rather than overwriting them.
+Preserve all settings except the unique run directory and Ray namespace to
+match the original protocol. The short physical `r/e15` output and symlink
+avoid the IPC path-length failure observed in the original study. A fresh run
+costs 12 evaluation cells; do not reuse a completed output directory.
 
 After all 12 cells finish, verify every raw score and the service-instance
 accounting:
 
 ```bash
 ../envs/eval/bin/python -m research.checkpoint_merge_14b.audit_artifacts \
-  --run-root "$(dirname "$PWD")/runs/qwen3-14b-dev8-v2" \
+  --run-root "$WORKSPACE/$NEW_RUN" \
   --service-log "$(dirname "$PWD")/appworld-service.log" \
   --include-merges --require-complete
 ```
@@ -157,11 +172,10 @@ export BCM_EVAL_PHYSICAL_DIR="$MODEL_MERGE_WORKSPACE/r/s15"
 export VLLM_RPC_BASE_PATH="$MODEL_MERGE_WORKSPACE/r/ipc15"
 export VLLM_CACHE_ROOT="$MODEL_MERGE_WORKSPACE/runtime/cache/vllm-bcm-r1-repro"
 
-mkdir -p "$BCM_EVAL_PHYSICAL_DIR" "$(dirname "$BCM_RUN_ROOT")"
-mkdir -p "$BCM_RUN_ROOT"
-ln -s "$BCM_EVAL_PHYSICAL_DIR" "$BCM_RUN_ROOT/evaluations"
+mkdir -p "$(dirname "$BCM_RUN_ROOT")"
 
 ../envs/eval/bin/python -m research.temporal_merge_search14b.run prepare
+../envs/eval/bin/python -m research.temporal_merge_search14b.amend_execution
 ../envs/eval/bin/python -m research.temporal_merge_search14b.run export
 ../envs/eval/bin/python -m research.temporal_merge_search14b.audit_exports \
   --root "$BCM_RUN_ROOT"
