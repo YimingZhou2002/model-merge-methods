@@ -1,0 +1,2185 @@
+diff --git a/agentevolver/client/env_client.py b/agentevolver/client/env_client.py
+index 21123e9..fc7bbcd 100644
+--- a/agentevolver/client/env_client.py
++++ b/agentevolver/client/env_client.py
+@@ -34,7 +34,7 @@ class EnvClient:
+         Returns:
+             Dict: The JSON response from the API.
+         """
+-        url = f"{self.base_url}/{endpoint}"  # ⭐ Constructs the full URL for the request
++        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+         data = {
+             "env_type": env_type,
+             "task_id": task_id,
+diff --git a/agentevolver/main_ppo.py b/agentevolver/main_ppo.py
+index 09e786d..0b1d3fe 100644
+--- a/agentevolver/main_ppo.py
++++ b/agentevolver/main_ppo.py
+@@ -156,12 +156,14 @@ def run_ppo(config) -> None:
+     """
+     if not ray.is_initialized():
+         # this is for local ray cluster
+-        ray.init(
+-            runtime_env={"env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN", "VLLM_LOGGING_LEVEL": "WARN",
+-             "VLLM_ALLOW_RUNTIME_LORA_UPDATING": "true", "VLLM_USE_V1": "1", "WANDB_API_KEY": "EMPTY",
+-             "WANDB_BASE_URL": "http://localhost"}},
+-            num_cpus=config.ray_init.num_cpus,
+-        )  # ⭐ Initialize the Ray cluster with the specified runtime environment and number of CPUs
++        worker_env = {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN",
++                      "VLLM_LOGGING_LEVEL": "WARN", "VLLM_USE_V1": "1"}
++        for key in ("PYTHONPATH", "HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "WANDB_MODE", "WANDB_PROJECT", "WANDB_ENTITY"):
++            if key in os.environ:
++                worker_env[key] = os.environ[key]
++        ray.init(runtime_env={"env_vars": worker_env},
++                 num_cpus=config.ray_kwargs.ray_init.num_cpus)
++
+ 
+     max_model_len: int = config.actor_rollout_ref.rollout.max_model_len
+     assert config.data.max_prompt_length + config.data.max_response_length <= max_model_len, f"max_prompt_length {config.data.max_prompt_length} + max_response_length {config.data.max_response_length} should be <= max_model_len {max_model_len}"  # ⭐ Ensure the sum of max prompt and response lengths does not exceed the max model length
+@@ -207,7 +209,10 @@ class TaskRunner:
+ 
+         # vllm early verify
+         if config.actor_rollout_ref.rollout.name in ["vllm"]:
+-            from verl.utils.vllm_utils import is_version_ge
++            try:
++                from verl.utils.vllm_utils import is_version_ge
++            except ImportError:
++                from verl.utils.vllm.utils import is_version_ge
+             if config.actor_rollout_ref.model.get('lora_rank', 0) > 0:
+                 if not is_version_ge(pkg='vllm', minver='0.7.3'):
+                     raise NotImplementedError("PPO LoRA is not supported before vllm 0.7.3")
+@@ -216,15 +221,9 @@ class TaskRunner:
+         if config.actor_rollout_ref.actor.strategy in ["fsdp", "fsdp2"]:
+             assert config.critic.strategy in ["fsdp", "fsdp2"]
+             from verl.single_controller.ray import RayWorkerGroup
+-            from verl.workers.fsdp_workers import (ActorRolloutRefWorker,
+-                                                   AsyncActorRolloutRefWorker,
+-                                                   CriticWorker)
+-            ####################
+-            # ANNI
+-            from agentevolver.module.exp_manager.het_fsdp_worker import HETAsyncActorRolloutRefWorker, HETActorRolloutRefWorker
+-            actor_rollout_cls = HETAsyncActorRolloutRefWorker if config.actor_rollout_ref.rollout.mode == "async" else HETActorRolloutRefWorker  # ⭐ Define the actor rollout class based on the mode
+-            # actor_rollout_cls = AsyncActorRolloutRefWorker if config.actor_rollout_ref.rollout.mode == "async" else ActorRolloutRefWorker
+-            ####################
++            from verl.workers.engine_workers import ActorRolloutRefWorker
++            from verl.workers.engine_workers import TrainingWorker as CriticWorker
++            actor_rollout_cls = ActorRolloutRefWorker
+             ray_worker_group_cls = RayWorkerGroup
+ 
+         elif config.actor_rollout_ref.actor.strategy == "megatron":
+@@ -277,8 +276,10 @@ class TaskRunner:
+             role_worker_mapping[Role.RefPolicy] = ray.remote(ActorRolloutRefWorker)  # ⭐ Add the reference policy worker to the mapping
+             mapping[Role.RefPolicy] = global_pool_id
+ 
+-        reward_fn = load_reward_manager(config, tokenizer, num_examine=0, **config.reward_model.get("reward_kwargs", {}))  # ⭐ Load the reward manager for training
+-        val_reward_fn = load_reward_manager(config, tokenizer, num_examine=1, **config.reward_model.get("reward_kwargs", {}))  # ⭐ Load the reward manager for validation
++        # AgentEvolver installs its environment reward adapter in init_workers.
++        # Native 0.9 reward-manager construction requires a different API.
++        reward_fn = None
++        val_reward_fn = None
+         resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)  # ⭐ Initialize the resource pool manager
+ 
+         from verl.utils.dataset.rl_dataset import collate_fn
+diff --git a/agentevolver/module/agent_flow/agent_flow.py b/agentevolver/module/agent_flow/agent_flow.py
+index eb1bde0..a3458b2 100644
+--- a/agentevolver/module/agent_flow/agent_flow.py
++++ b/agentevolver/module/agent_flow/agent_flow.py
+@@ -67,8 +67,11 @@ class AgentFlow(BaseAgentFlow):
+             Linear_CMT: The context manager after the execution.
+         """
+         self.cmt = context_manager
+-        # disable think for qwen3
+-        add_nothink = self.config.actor_rollout_ref.rollout.use_qwen3 # if qwen3, add /no_think
++        # disable think for qwen3 in non-thinking templates;
++        # linear_think intentionally enables thinking, so skip /no_think there
++        use_qwen3 = self.config.actor_rollout_ref.rollout.use_qwen3
++        context_template = self.config.actor_rollout_ref.rollout.context_template
++        add_nothink = use_qwen3 and context_template not in ("linear_think", "linear_tokens")
+ 
+         # 1. 🚀 Initialize messages
+         traj_exp_config.query = query
+diff --git a/agentevolver/module/context_manager/cmt_linear_think.py b/agentevolver/module/context_manager/cmt_linear_think.py
+index a15bf36..1cf3aa8 100644
+--- a/agentevolver/module/context_manager/cmt_linear_think.py
++++ b/agentevolver/module/context_manager/cmt_linear_think.py
+@@ -294,13 +294,12 @@ class LinearThinkCMT(Linear_CMT):
+ 
+     def prepare_world_interaction(self) -> str:
+         """
+-        Retrieves the latest content from the full context of the conversation.
+-
+-        Returns:
+-            str: The latest content from the full context.
++        Retrieves the latest content from the full context, stripping any
++        <think>...</think> blocks so the environment only sees the action.
+         """
+-        latest_content = self.full_context[-1].content  # ⭐ Retrieve the latest content from the full context
+-        return latest_content
++        from agentevolver.utils.thinking import extract_action_content
++        latest_content = self.full_context[-1].content
++        return extract_action_content(latest_content)
+ 
+ 
+     def group_tokenize(self):
+diff --git a/agentevolver/module/context_manager/cmt_linear_tokens.py b/agentevolver/module/context_manager/cmt_linear_tokens.py
+new file mode 100644
+index 0000000..353f6ee
+--- /dev/null
++++ b/agentevolver/module/context_manager/cmt_linear_tokens.py
+@@ -0,0 +1,416 @@
++"""Append-only token-ID context manager for Qwen3 thinking/CoT training.
++
++Maintains the full conversation as an append-only list of token IDs.  Uses
++/v1/completions (NOT /v1/chat/completions) so the server receives the EXACT
++token sequence we intend to train on — no template re-application, no
++thinking-stripping, no retokenization of sampled completions.
++
++Training prefix == inference prompt by construction.
++
++Loss mask:
++  - System/user/env headers and observations: 0
++  - Generation prompt (<|im_start|>assistant\\n and <think>\\n): 0
++  - Sampled completion tokens (reasoning + action + <|im_end|>): 1
++"""
++
++import copy
++import torch
++from typing import List, Optional
++
++from agentevolver.module.context_manager.cmt_base import ContextManagerBase, ExtendedMessage
++from agentevolver.module.context_manager.cmt_linear import Linear_CMT
++from agentevolver.schema.trajectory import Sample, Reward, Trajectory
++from agentevolver.utils.thinking import extract_action_content
++from best_logger import print_nested, NestedJsonItem, SeqItem
++
++
++class LinearTokenCMT(Trajectory, ContextManagerBase):
++    """Token-ID append-only context manager.
++
++    ``prepare_next_llm_context`` returns ``List[int]`` (token IDs), not
++    message dicts.  The caller routes them through ``submit_completions``
++    (``/v1/completions``).  Every token in ``self.token_ids`` is either
++    produced by the tokenizer from deterministic text (init/env/headers)
++    or is the verbatim server-returned sampled token ID (completions).
++    """
++
++    def __init__(self, config, tokenizer):
++        super().__init__()
++        self.config = config
++        self.tokenizer = tokenizer
++        self.full_context: List[ExtendedMessage] = []
++
++        max_response_length = config.actor_rollout_ref.rollout.response_length
++        max_model_len: int = config.actor_rollout_ref.rollout.max_model_len
++        self.max_seq_length: int = max_model_len - max_response_length
++
++        # Append-only token sequence (the whole conversation)
++        self.token_ids: List[int] = []
++
++        # Spans of sampled completions within token_ids: (start, end)
++        self._completion_spans: List[tuple] = []
++        # Per-token logprobs parallel to each span
++        self._completion_logprobs: List[List[float]] = []
++        # Server-returned prompt and completion IDs for provenance
++        self._server_prompt_ids: List[Optional[List[int]]] = []
++        self._server_completion_ids: List[List[int]] = []
++
++        # Index where the latest env turn starts (for remove_last_context)
++        self._env_turn_start: Optional[int] = None
++        self._env_ext_msg_appended: bool = False
++
++        # Generation prompt tokens — computed once at first use
++        self._gen_prompt_ids: Optional[List[int]] = None
++
++        # Chat template kwargs for thinking mode
++        self._enable_thinking = True
++        self._chat_template_kwargs = {"enable_thinking": True}
++        self._initial_prefix_length = None
++
++        self.generated_token_cnt = 0
++        self.discarded = False
++        self.is_terminated = False
++        self.reward = None
++        self.llm_output_mistakes = {}
++        self.metadata = {}
++
++    # ------------------------------------------------------------------
++    # Generation prompt
++    # ------------------------------------------------------------------
++    def _compute_gen_prompt_ids(self) -> List[int]:
++        """Compute the generation-prompt token IDs once.
++
++        Uses a dummy conversation so the result is deterministic.
++        """
++        dummy = [{"role": "user", "content": "x"}]
++        without = self.tokenizer.apply_chat_template(
++            dummy, tokenize=False, add_generation_prompt=False)
++        with_gp = self.tokenizer.apply_chat_template(
++            dummy, tokenize=False, add_generation_prompt=True,
++            **self._chat_template_kwargs)
++        ids_without = self.tokenizer(without, add_special_tokens=False)["input_ids"]
++        ids_with = self.tokenizer(with_gp, add_special_tokens=False)["input_ids"]
++        if ids_with[:len(ids_without)] != ids_without:
++            raise ValueError("Generation template is not an append-only extension")
++        return ids_with[len(ids_without):]
++
++    @property
++    def gen_prompt_ids(self) -> List[int]:
++        if self._gen_prompt_ids is None:
++            self._gen_prompt_ids = self._compute_gen_prompt_ids()
++        return self._gen_prompt_ids
++
++    # ------------------------------------------------------------------
++    # Env turn token computation
++    # ------------------------------------------------------------------
++    def _compute_env_turn_ids(self, env_content: str) -> List[int]:
++        """Compute tokens for an env (user) turn WITHOUT generation prompt.
++
++        Uses a template-diff approach with a dummy assistant turn to get
++        the exact token sequence the template would produce for a new user
++        message.
++        """
++        before_msgs = [{"role": "assistant", "content": "X"}]
++        after_msgs = [
++            {"role": "assistant", "content": "X"},
++            {"role": "user", "content": env_content},
++        ]
++        before_text = self.tokenizer.apply_chat_template(
++            before_msgs, tokenize=False, add_generation_prompt=False)
++        after_text = self.tokenizer.apply_chat_template(
++            after_msgs, tokenize=False, add_generation_prompt=False)
++        ids_before = self.tokenizer(before_text, add_special_tokens=False)["input_ids"]
++        ids_after = self.tokenizer(after_text, add_special_tokens=False)["input_ids"]
++        if ids_after[:len(ids_before)] != ids_before:
++            raise ValueError("Environment template is not an append-only extension")
++        return ids_after[len(ids_before):]
++
++    # ------------------------------------------------------------------
++    # CMT interface
++    # ------------------------------------------------------------------
++    def save_init_input(self, init_input_arr: list, add_nothink: bool = False):
++        """Tokenize initial messages with the chat template + generation prompt."""
++        text = self.tokenizer.apply_chat_template(
++            init_input_arr, tokenize=False, add_generation_prompt=True,
++            **self._chat_template_kwargs)
++        self.token_ids = self.tokenizer(text, add_special_tokens=False)["input_ids"]
++        if len(self.token_ids) > self.config.data.max_prompt_length:
++            raise ValueError("Initial prompt exceeds training prompt storage budget")
++        self._initial_prefix_length = len(self.token_ids)
++
++        for msg in init_input_arr:
++            ext_msg = ExtendedMessage(
++                author="initialization",
++                role=msg["role"],
++                content=msg["content"],
++                token_generator="auto",
++                tokenizer=self.tokenizer,
++            )
++            self.full_context.append(ext_msg)
++
++    def prepare_next_llm_context(self):
++        """Return the current token ID sequence as the prompt.
++
++        The caller must detect ``isinstance(result, list)`` and route to
++        ``submit_completions`` instead of ``submit_chat_completions``.
++        """
++        return list(self.token_ids)
++
++    def check_context_token_num_safe(self, prompt_ids) -> bool:
++        if isinstance(prompt_ids, list) and prompt_ids and isinstance(prompt_ids[0], int):
++            limit = min(self.max_seq_length,
++                        self._initial_prefix_length + self.config.data.max_response_length
++                        - self.config.actor_rollout_ref.rollout.response_length)
++            return len(prompt_ids) <= limit
++        return True
++
++    def save_llm_output(self, llm_output: dict, input_msg_ref=None,
++                        auto_register_full_context=True):
++        """Append sampled completion tokens.  Validates provenance."""
++        comp_ids = llm_output.get("completion_token_ids")
++        if comp_ids is None or len(comp_ids) == 0:
++            raise ValueError(
++                "Missing completion_token_ids from /v1/completions response; "
++                "cannot build consistent training sample")
++
++        logprobs = llm_output.get("token_logprobs")
++        if logprobs is None:
++            logprobs_from_tokens = [t.logprob for t in llm_output.get("tokens", [])]
++            if len(logprobs_from_tokens) == len(comp_ids):
++                logprobs = logprobs_from_tokens
++            else:
++                raise ValueError(
++                    f"Logprob count ({len(logprobs_from_tokens)}) != completion "
++                    f"token count ({len(comp_ids)}); rejecting inconsistent provenance")
++
++        # Strict prefix check
++        server_prompt = llm_output.get("prompt_token_ids")
++        if server_prompt is None:
++            raise ValueError("Missing server prompt token provenance")
++        if list(server_prompt) != list(self.token_ids):
++            raise ValueError("Prompt token ID mismatch: server prompt differs from training prefix")
++        if input_msg_ref is not None:
++            sent = list(input_msg_ref)
++            got = list(server_prompt)
++            if sent != got:
++                first_diff = next(
++                    (i for i, (a, b) in enumerate(zip(sent, got)) if a != b),
++                    min(len(sent), len(got)))
++                raise ValueError(
++                    f"Prompt token ID mismatch at position {first_diff}: "
++                    f"sent {len(sent)} tokens, server saw {len(got)}")
++
++        import math
++        if len(logprobs) != len(comp_ids) or any(
++                p is None or not math.isfinite(float(p)) for p in logprobs):
++            raise ValueError("Missing or inconsistent sampled completion logprobs")
++        if any(not isinstance(t, int) or t < 0 for t in comp_ids):
++            raise ValueError("Invalid sampled completion token ID")
++        # Append completion tokens
++        self._env_turn_start = None
++        self._env_ext_msg_appended = False
++        start = len(self.token_ids)
++        self.token_ids.extend(comp_ids)
++        end = len(self.token_ids)
++
++        self._completion_spans.append((start, end))
++        self._completion_logprobs.append(list(logprobs))
++        self._server_prompt_ids.append(
++            list(server_prompt) if server_prompt is not None else None)
++        self._server_completion_ids.append(list(comp_ids))
++
++        self.generated_token_cnt = len(comp_ids)
++
++        # Reconstruct full assistant content for text-level operations
++        raw_decoded = self.tokenizer.decode(comp_ids, skip_special_tokens=False)
++        # Strip trailing <|im_end|> or EOS from text
++        for stop_str in ("<|im_end|>", self.tokenizer.eos_token):
++            if stop_str and raw_decoded.endswith(stop_str):
++                raw_decoded = raw_decoded[:-len(stop_str)]
++                break
++        # The gen prompt included <think>\n; prepend it to get full content
++        full_content = "<think>\n" + raw_decoded if self._enable_thinking else raw_decoded
++        llm_output["_full_content"] = full_content
++        Linear_CMT.influence_extra_reward(self, dict(llm_output, content=full_content))
++
++        if auto_register_full_context:
++            ext_msg = ExtendedMessage(
++                author="llm",
++                role="assistant",
++                content=full_content,
++                token_generator="manual",
++                tokenizer=self.tokenizer,
++            )
++            ext_msg.token_arr = list(comp_ids)
++            self.full_context.append(ext_msg)
++
++        return ext_msg if auto_register_full_context else None
++
++    def save_env_output(self, env_output: dict, input_msg_ref=None,
++                        add_nothink: bool = False):
++        """Tokenize the env turn + next generation prompt and append."""
++        if "content" not in env_output or not env_output["content"]:
++            env_output["content"] = "[No content provided by the environment]"
++
++        ext_msg = ExtendedMessage(
++            author="env",
++            role="user",
++            content=env_output["content"],
++            clip=True,
++            clip_token_limit=self.config.actor_rollout_ref.rollout.max_env_len,
++            token_generator="auto",
++            tokenizer=self.tokenizer,
++        )
++        self._env_turn_start = len(self.token_ids)
++        # Returned completion IDs include a sampled EOS when generation stops;
++        # the message-separating newline belongs to the next masked input.
++        if self.token_ids and self.token_ids[-1] != self.tokenizer.eos_token_id:
++            self.token_ids.append(self.tokenizer.eos_token_id)
++        self.token_ids.extend(self.tokenizer("\n", add_special_tokens=False)["input_ids"])
++        env_turn_ids = self._compute_env_turn_ids(ext_msg.content_for_future)
++        self.token_ids.extend(env_turn_ids)
++        self.token_ids.extend(self.gen_prompt_ids)
++        self.full_context.append(ext_msg)
++        self._env_ext_msg_appended = True
++
++    def prepare_world_interaction(self) -> str:
++        """Return action-only text (thinking stripped) for the environment."""
++        content = self.full_context[-1].content
++        return extract_action_content(content)
++
++    def remove_last_context(self):
++        """Remove the trailing env turn + generation prompt tokens."""
++        if self._env_turn_start is not None:
++            self.token_ids = self.token_ids[:self._env_turn_start]
++            self._env_turn_start = None
++        if self._env_ext_msg_appended and self.full_context and \
++                self.full_context[-1].author != "llm":
++            self.full_context.pop()
++            self._env_ext_msg_appended = False
++
++    # ------------------------------------------------------------------
++    # Training: group_tokenize
++    # ------------------------------------------------------------------
++    def group_tokenize(self) -> List[Sample]:
++        """Build a single training sample from the append-only token history.
++
++        Whole-trajectory approach: one Sample per trajectory.  prompt_ids
++        = everything before the first completion; response_ids = from the
++        first completion to the end.
++        """
++        from verl.utils.model import compute_position_id_with_mask
++
++        if not self._completion_spans:
++            return []
++
++        input_ids = list(self.token_ids)
++        n = len(input_ids)
++
++        # Loss mask: 1 only for completion spans
++        loss_mask = [0] * n
++        sampled_logprobs = [0.0] * n
++        for j, (start, end) in enumerate(self._completion_spans):
++            if input_ids[:start] != self._server_prompt_ids[j]:
++                raise ValueError("Training prefix differs from actual rollout prompt")
++            if input_ids[start:end] != self._server_completion_ids[j]:
++                raise ValueError("Training completion differs from sampled token IDs")
++            if end > n or end - start != len(self._completion_logprobs[j]):
++                raise ValueError("Training sampled-token/logprob span is incomplete")
++            for i in range(start, min(end, n)):
++                loss_mask[i] = 1
++                sampled_logprobs[i] = self._completion_logprobs[j][i - start]
++
++        # Prompt/response split at first completion
++        split_idx = self._completion_spans[0][0]
++        assert split_idx > 0, "First completion cannot start at position 0"
++
++        attention_mask = [1] * n
++        position_ids = compute_position_id_with_mask(
++            torch.tensor(attention_mask)).tolist()
++
++        prompt_ids = input_ids[:split_idx]
++        response_ids = input_ids[split_idx:]
++        if len(prompt_ids) > self.config.data.max_prompt_length or len(response_ids) > self.config.data.max_response_length:
++            raise ValueError("Exact token trajectory exceeds storage budget; refusing truncation")
++
++        sample = Sample(
++            data_id=getattr(self, "data_id", ""),
++            rollout_id=getattr(self, "rollout_id", ""),
++            task_id=getattr(self, "task_id", ""),
++            minor_index_id=0,
++            messages=self._to_role_content(),
++            extras={"rollout_log_probs": sampled_logprobs[split_idx:],
++                    "exact_token_context": True,
++                    "exact_completion_spans": list(self._completion_spans)},
++            input_ids=input_ids,
++            prompt_ids=prompt_ids,
++            response_ids=response_ids,
++            attention_mask=attention_mask,
++            prompt_attention_mask=attention_mask[:split_idx],
++            response_attention_mask=attention_mask[split_idx:],
++            loss_mask=loss_mask,
++            prompt_loss_mask=loss_mask[:split_idx],
++            response_loss_mask=loss_mask[split_idx:],
++            position_ids=position_ids,
++            prompt_position_ids=position_ids[:split_idx],
++            response_position_ids=position_ids[split_idx:],
++            reward_scores=self.reward.model_dump() if self.reward else {},
++            max_prompt_len=self.config.data.max_prompt_length,
++            max_response_len=self.config.data.max_response_length,
++            max_model_len=(self.config.data.max_response_length +
++                           self.config.data.max_prompt_length),
++        )
++        sample.truncate_output_ids()
++        assert len(sample.response_ids) != 0, "response_ids should not be empty"
++        return [sample]
++
++    # ------------------------------------------------------------------
++    # Helpers
++    # ------------------------------------------------------------------
++    def _to_role_content(self) -> List[dict]:
++        return [{"role": m.role, "content": m.content_for_future}
++                for m in self.full_context]
++
++    def to_role_content(self, ext_messages):
++        return [{"role": m.role, "content": m.content_for_future} for m in ext_messages]
++
++    def json(self):
++        import json
++        return json.dumps(self._to_role_content(), ensure_ascii=False)
++
++    @property
++    def steps(self):
++        return self._to_role_content()
++
++    def compute_madness(self) -> float:
++        return Linear_CMT.compute_madness(self)
++
++    def reward_patch(self, _reward):
++        return _reward
++
++    def generate_log(self, task_id):
++        """Generate training visualisation log."""
++        samples = self.group_tokenize()
++        if not samples:
++            return
++        nested = {}
++        for idx, sample in enumerate(samples):
++            text_arr = [self.tokenizer.decode(t) for t in sample.input_ids]
++            id_arr = [str(t) for t in sample.input_ids]
++            color_arr = ["#09ABCF" if m == 1 else "#D98510"
++                         for m in sample.loss_mask]
++            outcome = str(self.reward.success_rate) if self.reward else "?"
++            nested[f"{task_id}.{outcome}.{idx}"] = NestedJsonItem(
++                item_id="item", outcome=outcome,
++                len_prompt_ids=len(sample.prompt_ids),
++                len_response_ids=len(sample.response_ids),
++                len_input_ids=len(sample.input_ids),
++                reward=f"{float(self.reward.outcome):.3f}" if self.reward else "0",
++                content=SeqItem(text=text_arr, title=text_arr,
++                                count=id_arr, color=color_arr),
++            )
++        print_nested(nested, main_content="", header=f"Training, task {task_id}",
++                     mod="rollout", narrow=False, attach="copy this")
++
++    def influence_extra_reward(self, llm_output):
++        pass
+diff --git a/agentevolver/module/env_manager/env_manager.py b/agentevolver/module/env_manager/env_manager.py
+index fdd5005..a8ab911 100644
+--- a/agentevolver/module/env_manager/env_manager.py
++++ b/agentevolver/module/env_manager/env_manager.py
+@@ -76,8 +76,8 @@ class ParallelEnvManager(object):
+         self.max_llm_retries: int = max_llm_retries
+ 
+         self.rollout_n = config.actor_rollout_ref.rollout.n
+-        self.model_name = self.async_rollout_manager.chat_scheduler.model_name
+-        self.tokenizer = self.async_rollout_manager.chat_scheduler.completion_callback.tokenizer
++        self.model_name = self.async_rollout_manager.model_name
++        self.tokenizer = self.async_rollout_manager.tokenizer
+         self.pad_token_id = self.tokenizer.pad_token_id
+         self.rollout_config = config.actor_rollout_ref.rollout
+ 
+@@ -99,37 +99,38 @@ class ParallelEnvManager(object):
+             callable: A function to chat with the language model.
+         """
+ 
+-        def llm_chat(messages: List[Dict[str, str]],
++        def llm_chat(messages,
+                      custom_sampling_params: dict = None,
+                      request_id: str = None) -> dict:
+-            """
+-            Sends messages to the language model and returns the assistant's response. This function handles
+-            retries and updates the sampling parameters.
+-
+-            Args:
+-                messages (List[Dict[str, str]]): A list of message dictionaries with "role" and "value" keys.
+-                custom_sampling_params (dict, optional): Custom sampling parameters to override the default ones.
+-                request_id (str, optional): A unique identifier for the request.
+-
+-            Returns:
+-                dict: The last message in the input messages, which is expected to be the assistant's response.
+-            """
+-            # TODO: sending sampling_params to rollout server
+             updated_sampling_params = {}
+             if sampling_params:
+                 updated_sampling_params.update(sampling_params)
+             if custom_sampling_params:
+                 updated_sampling_params.update(custom_sampling_params)
+-            updated_sampling_params.update({"logprobs": 1, "return_tokens_as_token_ids": True})  # ⭐ Update sampling parameters
++            updated_sampling_params.update({"logprobs": 1, "return_tokens_as_token_ids": True})
+ 
++            # Token-ID prompt mode (LinearTokenCMT): route to /v1/completions
++            if isinstance(messages, list) and messages and isinstance(messages[0], int):
++                for i in range(self.max_llm_retries):
++                    try:
++                        return self.async_rollout_manager.submit_completions(
++                            prompt_token_ids=messages,
++                            sampling_params=updated_sampling_params,
++                            request_id=request_id,
++                        )
++                    except Exception as e:
++                        logger.exception(f"rollout_server.{i} completions error: {e.args}")
++                        if i >= self.max_llm_retries - 1:
++                            raise
++                        time.sleep(i + 1)
++
++            # Original message-dict mode: route to /v1/chat/completions
+             input_messages = copy.deepcopy(messages)
+-            weighted_addresses = self.async_rollout_manager.chat_scheduler.weighted_addresses
+-            # logger.info(f"weighted_addresses={weighted_addresses}")
+             for i in range(self.max_llm_retries):
+                 try:
+                     self.async_rollout_manager.submit_chat_completions(messages=input_messages,
+                                                                        sampling_params=updated_sampling_params,
+-                                                                       request_id=request_id)  # ⭐ Submit chat completions
++                                                                       request_id=request_id)
+                     break
+ 
+                 except Exception as e:
+@@ -254,8 +255,9 @@ class ParallelEnvManager(object):
+                     max_completion_tokens=self.rollout_config.response_length,
+                     temperature=self.rollout_config.temperature,
+                     top_p=self.rollout_config.top_p,
+-                    # chat_template_kwargs={"enable_thinking": False}
+                 )
++                if self.rollout_config.context_template == "linear_think":
++                    sampling_params["chat_template_kwargs"] = {"enable_thinking": True}
+ 
+                 if mode == "validate":
+                     sampling_params["temperature"] = self.rollout_config.val_kwargs.temperature
+@@ -389,6 +391,8 @@ class ParallelEnvManager(object):
+                         pbar.update(1) # update progress bar when success
+ 
+                     except Exception as e:
++                        if self.rollout_config.context_template == "linear_tokens":
++                            raise
+                         # handle the uncaught exception
+                         logger.error(f"Task {params[1]}-{params[2]} raised an exception: {e}. Retrying... \n Task: {params[0]}")
+                         # resubmit, and reset tmux and stop
+@@ -463,13 +467,15 @@ class ParallelEnvManager(object):
+             # cc: message returned by the new env will be tagged as initialization, with no loss-mask
+             sample_arr = cmt.group_tokenize()  # ⭐ Tokenize the trajectory into samples
+             for sample in sample_arr:
+-                sample.extras = extras  # ⭐ Add extra information to each sample
++                sample.extras = {**extras, **sample.extras}
+             sample_arr_final += sample_arr
+ 
+         # Step 2: Calculate how many samples need to be removed
+         world_size = self.config.trainer.n_gpus_per_node * self.config.trainer.nnodes
+         remainder = len(sample_arr_final) % world_size
+         if remainder != 0:
++            if self.rollout_config.context_template == "linear_tokens":
++                raise ValueError("Exact-token trajectory batch is incomplete; refusing random removal")
+             import random
+             remove_indices = random.sample(range(len(sample_arr_final)), remainder)
+             # Sort in reverse order to avoid index shifting during removal
+@@ -530,7 +536,13 @@ class ParallelEnvManager(object):
+             # shuchang: 0809
+             # FIXME: Solve the issue of misaligned step IDs, use the unified step parsing function parse_response_ids_to_steps
+             resp_ids = sample.response_ids
+-            parse_result = parse_response_ids_to_steps(resp_ids, self.tokenizer) # ⭐ Parse the response IDs into step IDs and texts
++            if self.rollout_config.context_template == "linear_tokens":
++                parse_result = parse_response_ids_to_steps(
++                    resp_ids, self.tokenizer,
++                    assistant_tpl=self.tokenizer.encode("<|im_start|>assistant\n", add_special_tokens=False),
++                    user_tpl=self.tokenizer.encode("<|im_start|>user\n", add_special_tokens=False))
++            else:
++                parse_result = parse_response_ids_to_steps(resp_ids, self.tokenizer)
+ 
+             step_ids_list.append(torch.tensor(parse_result.step_ids, dtype=torch.long))
+             # generate steps_texts (for semantic evaluation)
+@@ -641,6 +653,18 @@ class ParallelEnvManager(object):
+             batch_size=len(samples),
+         )
+ 
++        if self.rollout_config.context_template == "linear_tokens":
++            behavior_probs = []
++            for sample in samples:
++                probs = sample.extras.get("rollout_log_probs")
++                if probs is None or len(probs) != len(sample.response_ids):
++                    raise ValueError("Missing aligned sampled behavior logprobs in final training sample")
++                behavior_probs.append(torch.tensor(probs, dtype=torch.float32))
++            batch["rollout_log_probs"] = pad_sequence_to_length(
++                pad_sequence(behavior_probs, batch_first=True, padding_value=0.0),
++                batch["responses"].shape[1], 0.0)
++            batch["response_mask"] = batch["loss_mask"][:, -batch["responses"].shape[1]:].clone()
++
+         return DataProto(
+             batch=batch,
+             non_tensor_batch={
+diff --git a/agentevolver/module/env_manager/env_worker.py b/agentevolver/module/env_manager/env_worker.py
+index f49619c..2538ee1 100644
+--- a/agentevolver/module/env_manager/env_worker.py
++++ b/agentevolver/module/env_manager/env_worker.py
+@@ -10,6 +10,7 @@ from agentevolver.schema.trajectory import Trajectory
+ from agentevolver.module.context_manager.cmt_linear import Linear_CMT, ExtendedMessage
+ from agentevolver.module.context_manager.cmt_linear_think import LinearThinkCMT
+ from agentevolver.module.context_manager.cmt_context_clip import SelfContextClipCMT
++from agentevolver.module.context_manager.cmt_linear_tokens import LinearTokenCMT
+ from agentevolver.module.exp_manager.exp_manager import TrajExpConfig
+ from typing import List, Dict, Any, Optional
+ 
+@@ -83,6 +84,8 @@ class EnvWorker(object):
+                 traj_cmt: Linear_CMT = Linear_CMT(self.config, self.tokenizer)
+             elif self.config.actor_rollout_ref.rollout.context_template == "linear_think":
+                 traj_cmt: LinearThinkCMT = LinearThinkCMT(self.config, self.tokenizer)
++            elif self.config.actor_rollout_ref.rollout.context_template == "linear_tokens":
++                traj_cmt: LinearTokenCMT = LinearTokenCMT(self.config, self.tokenizer)
+             elif self.config.actor_rollout_ref.rollout.context_template == "context_selfclip":
+                 traj_cmt: SelfContextClipCMT = SelfContextClipCMT(self.config, self.tokenizer, self.llm_chat_fn)
+             else:
+diff --git a/agentevolver/module/task_manager/adapter.py b/agentevolver/module/task_manager/adapter.py
+index 56f955c..46143c4 100644
+--- a/agentevolver/module/task_manager/adapter.py
++++ b/agentevolver/module/task_manager/adapter.py
+@@ -12,6 +12,22 @@ from omegaconf import DictConfig, ListConfig
+ from transformers.tokenization_utils import PreTrainedTokenizer
+ from transformers.processing_utils import ProcessorMixin
+ 
++_EMPTY_METADATA_SENTINEL = "__empty__"
++
++
++def _metadata_for_parquet(metadata: Optional[dict]) -> dict:
++    if metadata:
++        return metadata
++    return {_EMPTY_METADATA_SENTINEL: True}
++
++
++def _metadata_from_parquet(metadata: Optional[dict]) -> dict:
++    if not metadata:
++        return {}
++    if metadata.get(_EMPTY_METADATA_SENTINEL) is True and len(metadata) == 1:
++        return {}
++    return metadata
++
+ def convert_to_tasks(dataset:RLHFDataset,env_type:str, grader:str)->list[Task]:
+     """
+     Convert RLHFDataset to Task that used by TaskManager
+@@ -24,7 +40,7 @@ def convert_to_tasks(dataset:RLHFDataset,env_type:str, grader:str)->list[Task]:
+             task_id=extras.get("task_id", ""),
+             env_type=env_type,
+             open_query=extras.get("open_query", False),
+-            metadata=extras.get("metadata", {}),
++            metadata=_metadata_from_parquet(extras.get("metadata", {})),
+             query=extras.get("new_query"),  # Note: stored as "new_query" in extras
+             ground_truth=extras.get("ground_truth"),
+             evaluator=extras.get("evaluator", grader),
+@@ -59,14 +75,15 @@ def to_rl_dataset(
+                 "new_query": task.query,
+                 "evaluator": task.evaluator,
+                 "ground_truth": task_obj.ground_truth, # for some graders, such as LLM Judge w/ GT
+-                "metadata": task.metadata,  # Preserve metadata for avalon config and other use cases
++                "metadata": _metadata_for_parquet(task.metadata),  # Preserve metadata for avalon config and other use cases
+             },
+         }
+ 
+         processed_records.append(record)
+ 
+     df = pd.DataFrame(processed_records)
+-    with tempfile.NamedTemporaryFile(delete=False) as f:
++    # verl 0.9's RLHFDataset dispatches on file extension; keep .parquet suffix
++    with tempfile.NamedTemporaryFile(delete=False, suffix=".parquet") as f:
+         df.to_parquet(f.name)
+ 
+     # convert to RLHFDataset
+diff --git a/agentevolver/module/trainer/ae_async_llm_server_manager.py b/agentevolver/module/trainer/ae_async_llm_server_manager.py
+index dd99d4c..f8414e0 100644
+--- a/agentevolver/module/trainer/ae_async_llm_server_manager.py
++++ b/agentevolver/module/trainer/ae_async_llm_server_manager.py
+@@ -1,34 +1,328 @@
++"""verl 0.9 port of AgentEvolver's async rollout server manager.
++
++The original implementation subclassed verl<=0.4's AsyncLLMServerManager and
++routed chats through its ChatCompletionScheduler + SimpleCompletionCallback
++(which recovered vLLM token ids via logprobs `token_id:` strings).
++
++verl 0.9 removed that stack. This adapter keeps the exact same public surface
++AgentEvolver depends on (wake_up / sleep / submit_chat_completions / chat) but
++builds it on verl 0.9's LLMServerManager: OpenAI-compatible vLLM server
++replicas colocated with the FSDP training workers. Token ids are recovered
++client-side with `logprobs` + `return_tokens_as_token_ids`, matching the
++TokenAndProb objects Linear_CMT consumes (`.token_id`, `.logprob`).
++"""
++
+ import asyncio
++import itertools
++import os
++import threading
++from dataclasses import dataclass
+ from typing import Any, Dict, List, Optional
+ 
+-from verl.workers.rollout.async_server import AsyncLLMServerManager
++import requests
++from loguru import logger
++
++from verl.workers.rollout.llm_server import LLMServerManager
++
++
++@dataclass
++class TokenAndProb:
++    token_id: int
++    logprob: float = 0.0
++    decoded_string: str = ""
++
++
++def _run_async(coro):
++    """Run a coroutine to completion from sync code (thread-safe)."""
++    loop = asyncio.new_event_loop()
++    try:
++        return loop.run_until_complete(coro)
++    finally:
++        loop.close()
++
++
++class BaAsyncLLMServerManager:
++    @staticmethod
++    def server_config(config):
++        from agentevolver.utils.verl09_compat import strip_ae_extension_keys_full
++        stripped = strip_ae_extension_keys_full(config)
++        return stripped
++
++    def __init__(self, config, worker_group):
++        self.config = config
++        stripped = self.server_config(config)
++        self.manager = LLMServerManager.create(config=stripped, worker_group=worker_group)
++
++        # verl 0.9: rollout replicas start with load_format=dummy — REAL actor
++        # weights must be pushed via update_weights (the old sharding-manager
++        # sync inside wake_up no longer exists). CheckpointEngineManager
++        # orchestrates sleep->sync->wake across actor workers and replicas.
++        from verl.checkpoint_engine import CheckpointEngineManager
++        from verl.utils.config import omega_conf_to_dataclass
++
++        ckpt_cfg = omega_conf_to_dataclass(stripped.actor_rollout_ref.rollout.checkpoint_engine)
++        self.checkpoint_manager = CheckpointEngineManager(
++            config=ckpt_cfg,
++            actor_wg=worker_group,
++            replicas=self.manager.get_replicas(),
++        )
++        self._global_steps = 0
++        # replicas start awake after creation; update_weights (naive backend)
++        # expects them asleep — match verl 0.9 trainer init semantics.
++        self._gather_replica_calls("sleep")
++        addresses = list(self.manager.get_addresses())
++        assert addresses, "LLMServerManager returned no server addresses"
++        self.addresses = [a if a.startswith("http") else f"http://{a}" for a in addresses]
++        self._rr = itertools.cycle(self.addresses)
++        self._rr_lock = threading.Lock()
++        self.model_name = self._detect_model_name()
++        # downstream (env_manager) expects a tokenizer on the manager
++        from transformers import AutoTokenizer
++
++        self.tokenizer = AutoTokenizer.from_pretrained(
++            self.config.actor_rollout_ref.model.path, trust_remote_code=False
++        )
++        logger.info(
++            f"BaAsyncLLMServerManager(verl0.9): replicas={self.addresses} model={self.model_name}"
++        )
++
++    def _detect_model_name(self) -> str:
++        for addr in self.addresses:
++            try:
++                r = requests.get(f"{addr}/v1/models", timeout=30)
++                r.raise_for_status()
++                data = r.json().get("data") or []
++                if data:
++                    return data[0]["id"]
++            except Exception as e:
++                logger.warning(f"model-name probe failed on {addr}: {e}")
++        return self.config.actor_rollout_ref.model.path
++
++    # ------------------------------------------------------------------ #
++    # lifecycle                                                           #
++    # ------------------------------------------------------------------ #
++    def _gather_replica_calls(self, method: str):
++        replicas = self.manager.get_replicas()
++
++        async def _run_all():
++            results = [getattr(r, method)() for r in replicas]
++            coros = [x for x in results if asyncio.iscoroutine(x)]
++            if coros:
++                await asyncio.gather(*coros)
+ 
++        _run_async(_run_all())
+ 
+-class BaAsyncLLMServerManager(AsyncLLMServerManager):
+-    
+-    def chat(self, messages: list[dict[str, str]], sampling_params: dict[str, Any]) -> str:
+-        """todo"""
+-        self.submit_chat_completions(messages.copy(), sampling_params)
+-        return messages[-1]['content']
++    def wake_up(self):
++        """Push the latest actor weights into the rollout replicas and wake
++        them (verl 0.9: update_weights performs sync + wake in one call)."""
++        self._global_steps += 1
++        res = self.checkpoint_manager.update_weights(self._global_steps)
++        if asyncio.iscoroutine(res):
++            _run_async(res)
++
++    def sleep(self):
++        self._gather_replica_calls("sleep")
++
++    # ------------------------------------------------------------------ #
++    # chat                                                                #
++    # ------------------------------------------------------------------ #
++    def _next_addr(self) -> str:
++        with self._rr_lock:
++            return next(self._rr)
+ 
+     def submit_chat_completions(
+-            self,
+-            messages: List[Dict[str, str]],
+-            sampling_params: Dict[str, Any],
+-            request_id: Optional[str] = None,
++        self,
++        messages: List[Dict[str, str]],
++        sampling_params: Dict[str, Any],
++        request_id: Optional[str] = None,
+     ):
+-        """Submit a chat completion request to chat scheduler and wait until it is done.
+-        To submit multiple requests in parallel, please use `generate_sequences` instead.
++        """POST an OpenAI chat completion and append the assistant message
++        (with recovered vLLM token ids) to `messages`, mirroring the behavior
++        of the old scheduler+SimpleCompletionCallback path."""
++        payload_msgs = [{"role": m["role"], "content": m["content"]} for m in messages]
++        params = dict(sampling_params or {})
++        max_tokens = params.get("max_completion_tokens") or params.get("max_tokens")
++        payload = {
++            "model": self.model_name,
++            "messages": payload_msgs,
++            "logprobs": True,
++            "return_tokens_as_token_ids": True,
++        }
++        for key in ("temperature", "top_p", "top_k", "repetition_penalty"):
++            if key in params and params[key] is not None:
++                payload[key] = params[key]
++        if max_tokens is not None:
++            payload["max_tokens"] = int(max_tokens)
++        if params.get("chat_template_kwargs"):
++            payload["chat_template_kwargs"] = params["chat_template_kwargs"]
+ 
+-        Args: same as ChatCompletionScheduler.submit_chat_completions.
+-        """
+-        assert self.chat_scheduler is not None, "chat scheduler is not initialized."
+-        future = asyncio.run_coroutine_threadsafe(
+-            self.chat_scheduler._submit_chat_completions_semaphore(
+-                messages=messages,
+-                request_id=request_id,
+-                sampling_params=sampling_params,
+-            ),
+-            self.chat_scheduler_loop,
++        payload["return_token_ids"] = True
++        addr = self._next_addr()
++        resp = requests.post(f"{addr}/v1/chat/completions", json=payload, timeout=1200)
++        resp.raise_for_status()
++        data = resp.json()
++        choice = data["choices"][0]
++        msg = choice.get("message") or {}
++        content = msg.get("content")
++        reasoning_content = msg.get("reasoning_content")
++
++        if reasoning_content:
++            from agentevolver.utils.thinking import merge_reasoning_and_content
++            full_content = merge_reasoning_and_content(reasoning_content, content or "")
++        else:
++            full_content = content
++
++        if full_content is None:
++            full_content = "vllm failed"
++        if full_content == "" or choice.get("finish_reason") != "stop":
++            logger.warning(
++                f"vllm empty/non-stop response: finish_reason={choice.get('finish_reason')}"
++            )
++            logger.bind(bad_case=True).error(str(choice)[:2000])
++
++        tokens = []
++        completion_token_ids_raw = choice.get("token_ids") or []
++        if reasoning_content and completion_token_ids_raw:
++            # Use full completion token IDs (thinking + action) to avoid
++            # re-tokenizing generated text.  Per-token logprobs are not
++            # available for reasoning tokens via the OpenAI logprobs API;
++            # the actor recomputes them during training anyway.
++            tokens = [
++                TokenAndProb(token_id=tid, logprob=0.0)
++                for tid in completion_token_ids_raw
++            ]
++        else:
++            lp_content = (choice.get("logprobs") or {}).get("content") or []
++            for t in lp_content:
++                tok = t.get("token", "")
++                if "token_id:" not in tok:
++                    continue
++                try:
++                    decoded = bytes(t["bytes"]).decode("utf-8") if t.get("bytes") else ""
++                except Exception:
++                    decoded = "<cannot decode>"
++                tokens.append(
++                    TokenAndProb(
++                        token_id=int(tok.split("token_id:")[-1]),
++                        logprob=t.get("logprob", 0.0),
++                        decoded_string=decoded,
++                    )
++                )
++
++        messages.append(
++            {
++                "role": "assistant",
++                "request_id": data.get("id", ""),
++                "content": full_content,
++                "tokens": tokens,
++                "prompt_token_ids": data.get("prompt_token_ids"),
++                "completion_token_ids": choice.get("token_ids"),
++                "finish_reason": choice.get("finish_reason"),
++                "completion_tokens": (data.get("usage") or {}).get("completion_tokens"),
++                "sampling_params": dict({k: v for k, v in payload.items() if k not in ("messages", "model")}, logprobs_mode=params.get("expected_logprobs_mode", "server_default")),
++            }
+         )
+-        future.result()
++        return messages[-1]
++
++    def chat(self, messages: List[Dict[str, str]], sampling_params: Dict[str, Any]) -> str:
++        out = self.submit_chat_completions(list(messages), sampling_params)
++        return out["content"]
++
++    # ------------------------------------------------------------------ #
++    # /v1/completions with token-ID prompt (LinearTokenCMT path)          #
++    # ------------------------------------------------------------------ #
++    def submit_completions(
++        self,
++        prompt_token_ids: List[int],
++        sampling_params: Dict[str, Any],
++        request_id: Optional[str] = None,
++    ) -> dict:
++        """POST to /v1/completions with a token-ID prompt.
++
++        Returns all generated tokens with per-token logprobs — no content
++        vs reasoning split, no re-tokenization.  The caller
++        (LinearTokenCMT) appends the raw completion_token_ids to its
++        append-only history.
++        """
++        params = dict(sampling_params or {})
++        max_tokens = params.get("max_completion_tokens") or params.get("max_tokens")
++
++        payload = {
++            "model": self.model_name,
++            "prompt": prompt_token_ids,
++            "logprobs": 1,
++            "return_tokens_as_token_ids": True,
++            "return_token_ids": True,
++        }
++        for key in ("temperature", "top_p", "top_k", "repetition_penalty"):
++            if key in params and params[key] is not None:
++                payload[key] = params[key]
++        if max_tokens is not None:
++            payload["max_tokens"] = int(max_tokens)
++
++        addr = self._next_addr()
++        resp = requests.post(f"{addr}/v1/completions", json=payload, timeout=1200)
++        resp.raise_for_status()
++        data = resp.json()
++        choice = data["choices"][0]
++
++        completion_token_ids = choice.get("token_ids")
++        if completion_token_ids is None:
++            raise ValueError(
++                "vLLM /v1/completions did not return token_ids; "
++                "ensure return_token_ids=True is supported by this vLLM build")
++
++        # Per-token logprobs
++        lp = choice.get("logprobs") or {}
++        token_logprobs = lp.get("token_logprobs") or []
++        if len(token_logprobs) != len(completion_token_ids):
++            raise ValueError(
++                f"Logprob count ({len(token_logprobs)}) != completion token "
++                f"count ({len(completion_token_ids)}); rejecting inconsistent "
++                f"provenance")
++
++        import math
++        if any(p is None or not math.isfinite(float(p)) for p in token_logprobs):
++            raise ValueError("Missing or non-finite sampled token logprob")
++        lp_tokens = lp.get("tokens") or []
++        if len(lp_tokens) != len(completion_token_ids) or [
++            int(t.split("token_id:")[-1]) for t in lp_tokens
++        ] != list(completion_token_ids):
++            raise ValueError("Logprob token IDs differ from returned completion IDs")
++        returned_prompt = choice.get("prompt_token_ids")
++        if returned_prompt is None:
++            returned_prompt = data.get("prompt_token_ids")
++        if returned_prompt is None or list(returned_prompt) != list(prompt_token_ids):
++            raise ValueError("Missing or mismatched server prompt token provenance")
++
++        tokens = [
++            TokenAndProb(
++                token_id=tid,
++                logprob=float(lp_val),
++            )
++            for tid, lp_val in zip(completion_token_ids, token_logprobs)
++        ]
++
++        # Decode text for env interaction / logging
++        text = choice.get("text", "")
++        if not text:
++            text = self.tokenizer.decode(
++                completion_token_ids, skip_special_tokens=False)
++
++        finish_reason = choice.get("finish_reason")
++        if finish_reason != "stop":
++            logger.warning(
++                f"vllm completions non-stop: finish_reason={finish_reason}")
++
++        return {
++            "role": "assistant",
++            "content": text,
++            "tokens": tokens,
++            "token_logprobs": token_logprobs,
++            "completion_token_ids": completion_token_ids,
++            "prompt_token_ids": returned_prompt,
++            "finish_reason": finish_reason,
++            "request_id": data.get("id", ""),
++            "completion_tokens": (data.get("usage") or {}).get(
++                "completion_tokens"),
++        }
+diff --git a/agentevolver/module/trainer/ae_ray_trainer.py b/agentevolver/module/trainer/ae_ray_trainer.py
+index 192bddb..c35ef25 100644
+--- a/agentevolver/module/trainer/ae_ray_trainer.py
++++ b/agentevolver/module/trainer/ae_ray_trainer.py
+@@ -48,9 +48,16 @@ from agentevolver.utils.metric_utils import (compute_data_metrics,
+                                            compute_timing_metrics,
+                                            process_validation_metrics)
+ from verl.trainer.ppo.ray_trainer import (AdvantageEstimator, RayPPOTrainer, ResourcePoolManager, WorkerType,
+-                                          _timer, apply_kl_penalty,
++                                          apply_kl_penalty,
+                                           compute_response_mask, Role)
+-from verl.trainer.ppo.reward import compute_reward, compute_reward_async
++from verl.utils.profiler.performance import marked_timer as _timer
++
++def compute_reward(data, reward_fn):
++    result = reward_fn(data, return_dict=True)
++    return result["reward_tensor"], result["reward_extra_info"]
++
++compute_reward_async = None
++
+ from verl.utils.dataset.rl_dataset import RLHFDataset
+ from verl.utils.metric import reduce_metrics
+ 
+@@ -412,9 +419,10 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+         # create actor and rollout
+         if self.hybrid_engine:
+             resource_pool = self.resource_pool_manager.get_resource_pool(Role.ActorRollout)
++            from agentevolver.utils.verl09_compat import strip_ae_extension_keys
+             actor_rollout_cls = RayClassWithInitArgs(
+                 cls=self.role_worker_mapping[Role.ActorRollout],
+-                config=self.config.actor_rollout_ref,
++                config=strip_ae_extension_keys(self.config.actor_rollout_ref),
+                 role="actor_rollout",
+             )
+             self.resource_pool_to_cls[resource_pool]["actor_rollout"] = actor_rollout_cls
+@@ -431,7 +439,7 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+         if self.use_reference_policy:
+             resource_pool = self.resource_pool_manager.get_resource_pool(Role.RefPolicy)
+             ref_policy_cls = RayClassWithInitArgs(self.role_worker_mapping[Role.RefPolicy],
+-                                                  config=self.config.actor_rollout_ref, role="ref")
++                                                  config=strip_ae_extension_keys(self.config.actor_rollout_ref), role="ref")
+             self.resource_pool_to_cls[resource_pool]["ref"] = ref_policy_cls
+ 
+         # create a reward model if reward_fn is None
+@@ -514,7 +522,7 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+             collate_fn = default_collate_fn
+ 
+ 
+-        from verl.trainer.main_ppo import create_rl_dataset
++        from verl.trainer.ppo.utils import create_rl_dataset
+         # load train dataset from files or environment
+         env_client=EnvClient(self.config.env_service.env_url)
+         if self.config.data.train_files is not None:
+@@ -535,7 +543,7 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                 logger.warning("using test_normal as val dataset")
+                 num_loaded_val_tasks += self.val_task_manager.load_tasks_from_environment(env_client,env_type=self.config.env_service.env_type,split="test_normal")
+             else:
+-                for split in ['val','dev']:
++                for split in (['dev'] if self.config.env_service.env_type == 'appworld' else ['val', 'dev']):
+                     try:
+                         num_loaded_val_tasks += self.val_task_manager.load_tasks_from_environment(env_client,env_type=self.config.env_service.env_type,split=split)
+                     except:
+@@ -566,7 +574,7 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+         assert not isinstance(self.val_dataset,AutoReloadDataset), "please disable multiple workers for AutoReloadDataset"
+         self.train_dataloader = StatefulDataLoader(
+             dataset=self.train_dataset,
+-            batch_size=self.config.data.get("gen_batch_size", self.config.data.train_batch_size),
++            batch_size=(self.config.data.get("gen_batch_size") or self.config.data.train_batch_size),
+             num_workers=self.config.data.get("dataloader_num_workers", 8),
+             drop_last=True,
+             collate_fn=collate_fn,
+@@ -846,8 +854,8 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+             if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
+                 return {}
+ 
+-            batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
+-            non_tensor_batch_keys_to_pop = ["raw_prompt_ids"]
++            batch_keys_to_pop = [k for k in ["input_ids", "attention_mask", "position_ids"] if k in test_batch.batch.keys()]
++            non_tensor_batch_keys_to_pop = [k for k in ["raw_prompt_ids"] if k in test_batch.non_tensor_batch]
+             if "multi_modal_data" in test_batch.non_tensor_batch:
+                 non_tensor_batch_keys_to_pop.append("multi_modal_data")
+             if "raw_prompt" in test_batch.non_tensor_batch:
+@@ -975,8 +983,8 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+             if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
+                 return {}
+ 
+-            batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
+-            non_tensor_batch_keys_to_pop = ["raw_prompt_ids"]
++            batch_keys_to_pop = [k for k in ["input_ids", "attention_mask", "position_ids"] if k in test_batch.batch.keys()]
++            non_tensor_batch_keys_to_pop = [k for k in ["raw_prompt_ids"] if k in test_batch.non_tensor_batch]
+             if "multi_modal_data" in test_batch.non_tensor_batch:
+                 non_tensor_batch_keys_to_pop.append("multi_modal_data")
+             if "raw_prompt" in test_batch.non_tensor_batch:
+@@ -1026,6 +1034,100 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+         return
+ 
+ 
++    def _compute_old_log_prob_td(self, batch: DataProto) -> DataProto:
++        from verl.utils import tensordict_utils as tu
++        from verl.workers.utils.padding import (left_right_2_no_padding,
++                                                no_padding_2_padding)
++
++        batch_td = left_right_2_no_padding(batch.to_tensordict())
++        # the engine scales logits by "temperature" when computing log_probs;
++        # verl 0.9 rollouts carry it in meta_info, AE's custom rollout doesn't.
++        tu.assign_non_tensor(
++            batch_td,
++            temperature=self.config.actor_rollout_ref.rollout.temperature,
++            calculate_entropy=True,
++            calculate_sum_pi_squared=self.config.actor_rollout_ref.actor.get("calculate_sum_pi_squared", False),
++            compute_loss=False,
++        )
++        output = self.actor_rollout_wg.compute_log_prob(batch_td)
++        log_probs = no_padding_2_padding(tu.get(output, "log_probs"), batch_td)
++        entropy = no_padding_2_padding(tu.get(output, "entropy"), batch_td)
++        result = tu.get_tensordict({"old_log_probs": log_probs.float(), "entropys": entropy.float()})
++        return DataProto.from_tensordict(result)
++
++    def _compute_ref_log_prob_td(self, batch: DataProto) -> DataProto:
++        from verl.utils import tensordict_utils as tu
++        from verl.workers.utils.padding import (left_right_2_no_padding,
++                                                no_padding_2_padding)
++
++        batch_td = left_right_2_no_padding(batch.to_tensordict())
++        metadata = {
++            "temperature": self.config.actor_rollout_ref.rollout.temperature,
++            "calculate_entropy": False,
++            "compute_loss": False,
++        }
++        if self.ref_in_actor:
++            metadata["no_lora_adapter"] = True
++        tu.assign_non_tensor(batch_td, **metadata)
++        if self.ref_in_actor:
++            output = self.actor_rollout_wg.compute_log_prob(batch_td)
++        else:
++            output = self.ref_policy_wg.compute_ref_log_prob(batch_td)
++        log_probs = no_padding_2_padding(tu.get(output, "log_probs"), batch_td)
++        return DataProto.from_tensordict(tu.get_tensordict({"ref_log_prob": log_probs.float()}))
++
++    def _update_actor_td(self, batch: DataProto) -> DataProto:
++        from verl.utils import tensordict_utils as tu
++        from verl.utils.py_functional import rename_dict
++        from verl.workers.utils.padding import left_right_2_no_padding
++        rollout = self.config.actor_rollout_ref.rollout
++        actor = self.config.actor_rollout_ref.actor
++        batch.meta_info["multi_turn"] = rollout.multi_turn.enable
++        batch.meta_info["temperature"] = rollout.temperature
++        batch_td = left_right_2_no_padding(batch.to_tensordict())
++        mini = actor.ppo_mini_batch_size * rollout.n
++        tu.assign_non_tensor(batch_td,
++            calculate_entropy=actor.entropy_coeff != 0.0,
++            global_batch_size=mini, mini_batch_size=mini,
++            epochs=actor.ppo_epochs, seed=actor.get("data_loader_seed", 42),
++            dataloader_kwargs={"shuffle": actor.get("shuffle", False)},
++            compute_loss=True, use_dynamic_bsz=False, micro_batch_size_per_gpu=1)
++        output = self.actor_rollout_wg.update_actor(batch_td)
++        metrics = rename_dict(tu.get(output, "metrics"), "actor/")
++        if "actor/mfu" in metrics:
++            metrics["perf/mfu/actor"] = metrics.pop("actor/mfu")
++        return DataProto.from_single_dict(data={}, meta_info={"metrics": metrics})
++
++
++    def _save_checkpoint(self):
++        # Keep native resume states bounded while retaining every requested HF export.
++        import pathlib
++        import shutil
++        super()._save_checkpoint()
++        export_root = self.config.trainer.get("export_model_dir")
++        if not export_root:
++            return
++        native = pathlib.Path(self.config.trainer.default_local_dir) / f"global_step_{self.global_steps}" / "actor" / "huggingface"
++        target = pathlib.Path(export_root) / f"checkpoint-{self.global_steps}"
++        weights = list(native.glob("*.safetensors"))
++        if not weights or any(p.stat().st_size == 0 for p in weights):
++            raise RuntimeError(f"HF export is missing or incomplete: {native}")
++        target.mkdir(parents=True, exist_ok=True)
++        for item in native.iterdir():
++            if item.is_file():
++                dest = target / item.name
++                if not dest.exists():
++                    try:
++                        os.link(item, dest)
++                    except OSError:
++                        shutil.copy2(item, dest)
++        self.tokenizer.save_pretrained(target)
++        (target / "EXPORT_READY.json").write_text(json.dumps({
++            "step": self.global_steps, "initial_model": self.config.actor_rollout_ref.model.path,
++            "weights": [{"file": p.name, "bytes": p.stat().st_size} for p in weights],
++        }, indent=2) + "\n")
++        print(f"HF_CHECKPOINT_READY step={self.global_steps} path={target}", flush=True)
++
+     def fit(self):
+         """
+         The training loop of PPO.
+@@ -1086,8 +1188,8 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                 batch: DataProto = DataProto.from_single_dict(batch_dict)
+ 
+                 # pop those keys for generation
+-                batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
+-                non_tensor_batch_keys_to_pop = ["raw_prompt_ids"]
++                batch_keys_to_pop = [k for k in ["input_ids", "attention_mask", "position_ids"] if k in batch.batch.keys()]
++                non_tensor_batch_keys_to_pop = [k for k in ["raw_prompt_ids"] if k in batch.non_tensor_batch]
+                 if "multi_modal_data" in batch.non_tensor_batch:
+                     non_tensor_batch_keys_to_pop.append("multi_modal_data")
+                 if "raw_prompt" in batch.non_tensor_batch:
+@@ -1178,7 +1280,10 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                     batch.non_tensor_batch['original_extras']=batch_extras  # ⭐ Store original extras before scaling
+                     batch = union_gen_batch_via_task_id(tasks, batch, gen_batch_output)  # ⭐ Merge generated batch with the current batch
+ 
+-                    batch.batch["response_mask"] = compute_response_mask(batch)  # ⭐ Compute and add response mask to the batch
++                    if self.config.actor_rollout_ref.rollout.context_template == "linear_tokens":
++                        batch.batch["response_mask"] = batch.batch["loss_mask"][:, -batch.batch["responses"].shape[1]:].clone()
++                    else:
++                        batch.batch["response_mask"] = compute_response_mask(batch)
+ 
+                     # update experience pool
+                     summary_task = self.exp_manager.submit_summary_task(trajectories, self.global_steps)
+@@ -1199,14 +1304,14 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                             reward_tensor = self.rm_wg.compute_rm_score(batch)  # ⭐ Compute reward scores using the reward model
+                             batch = batch.union(reward_tensor)
+ 
+-                        if self.config.reward_model.launch_reward_fn_async:
++                        if self.config.reward_model.get("launch_reward_fn_async", False):
+                             future_reward = compute_reward_async.remote(batch, self.config, self.tokenizer)
+                         else:
+                             reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn)  # ⭐ Compute rewards and extra information
+ 
+                     # recompute old_log_probs
+                     with _timer("old_log_prob", timing_raw):
+-                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)  # ⭐ Compute old log probabilities
++                        old_log_prob = self._compute_old_log_prob_td(batch)  # ⭐ Compute old log probabilities
+                         entropys = old_log_prob.batch["entropys"]
+                         response_masks = batch.batch["response_mask"]
+                         loss_agg_mode = self.config.actor_rollout_ref.actor.loss_agg_mode
+@@ -1214,6 +1319,13 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                         old_log_prob_metrics = {"actor/entropy_loss": entropy_loss.detach().item()}
+                         metrics.update(old_log_prob_metrics)
+                         old_log_prob.batch.pop("entropys")
++                        if self.config.actor_rollout_ref.rollout.context_template == "linear_tokens":
++                            if "rollout_log_probs" not in batch.batch:
++                                raise ValueError("Exact-token training is missing sampled behavior logprobs")
++                            mask = batch.batch["response_mask"].bool()
++                            differences = (old_log_prob.batch["old_log_probs"] - batch.batch["rollout_log_probs"]).abs()
++                            metrics["actor/sampled_recomputed_logprob_mae"] = differences[mask].mean().item()
++                            old_log_prob.batch["old_log_probs"] = batch.batch["rollout_log_probs"].clone()
+                         batch = batch.union(old_log_prob)
+ 
+                         if "rollout_log_probs" in batch.batch.keys():
+@@ -1244,7 +1356,7 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                         # compute reference log_prob
+                         with _timer("ref", timing_raw):
+                             if not self.ref_in_actor:
+-                                ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(batch)  # ⭐ Compute reference log probabilities
++                                ref_log_prob = self._compute_ref_log_prob_td(batch)  # ⭐ Compute reference log probabilities
+                             else:
+                                 ref_log_prob = self.actor_rollout_wg.compute_ref_log_prob(batch)
+                             batch = batch.union(ref_log_prob)
+@@ -1258,7 +1370,7 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                     with _timer("adv", timing_raw):
+                         # we combine with rule-based rm
+                         reward_extra_infos_dict: dict[str, list]
+-                        if self.config.reward_model.launch_reward_fn_async:
++                        if self.config.reward_model.get("launch_reward_fn_async", False):
+                             reward_tensor, reward_extra_infos_dict = ray.get(future_reward)  # ⭐ Get the reward tensor and extra info from the async call
+                         batch.batch["token_level_scores"] = reward_tensor
+ 
+@@ -1331,7 +1443,7 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                         # update actor
+                         with _timer("update_actor", timing_raw):
+                             batch.meta_info["multi_turn"] = self.config.actor_rollout_ref.rollout.multi_turn.enable
+-                            actor_output = self.actor_rollout_wg.update_actor(batch)  # ⭐ Update the actor with the new batch
++                            actor_output = self._update_actor_td(batch)  # ⭐ Update the actor with the new batch
+                         actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                         metrics.update(actor_output_metrics)
+                     
+@@ -1415,5 +1527,3 @@ class AgentEvolverRayPPOTrainer(RayPPOTrainer):
+                 assert isinstance(self.train_dataset._mixture_strategy,UnifiedMixtureStrategy)
+                 self.train_dataset._mixture_strategy._synthetic_ratio-=1/5 # initial 1, 0 at about epoch 5 (about step 30)
+             self.train_dataset.update()  # ⭐ Update the training dataset for the next iteration
+-
+-
+diff --git a/agentevolver/utils/thinking.py b/agentevolver/utils/thinking.py
+new file mode 100644
+index 0000000..1abb7b6
+--- /dev/null
++++ b/agentevolver/utils/thinking.py
+@@ -0,0 +1,27 @@
++import re
++
++_THINK_BLOCK_RE = re.compile(r'<think>.*?</think>\s*', re.DOTALL)
++
++
++def extract_action_content(content: str) -> str:
++    """Remove <think>...</think> blocks and return the action-only portion.
++
++    Returns empty string for thinking-only or truncated generations —
++    never falls back to the original reasoning content, which could
++    cause reasoning to be executed as an action by the environment.
++    """
++    if '<think>' in content and '</think>' not in content:
++        return ''
++    action = _THINK_BLOCK_RE.sub('', content).strip()
++    # Strip orphaned opening/closing tags from truncated generations
++    action = action.replace("<think>", "").replace("</think>", "").strip()
++    return action
++
++
++def has_thinking_content(content: str) -> bool:
++    return '<think>' in content and '</think>' in content
++
++
++def merge_reasoning_and_content(reasoning_content: str, content: str) -> str:
++    """Reconstruct the full assistant output from split reasoning/content fields."""
++    return f"<think>\n{reasoning_content}\n</think>\n{content}"
+diff --git a/agentevolver/utils/verl09_compat.py b/agentevolver/utils/verl09_compat.py
+new file mode 100644
+index 0000000..a7d6025
+--- /dev/null
++++ b/agentevolver/utils/verl09_compat.py
+@@ -0,0 +1,59 @@
++"""verl 0.9 compatibility helpers.
++
++verl 0.9 converts config subtrees into strict dataclasses inside the workers
++(FSDPActorConfig, RolloutConfig, MultiTurnConfig, ...). AgentEvolver extends
++the `actor_rollout_ref.rollout` subtree with its own driver-side keys, which
++the 0.9 dataclasses reject with TypeError.
++
++The driver-side AgentEvolver code keeps reading the ORIGINAL config; only the
++copies handed to verl workers / the LLM server manager are stripped here.
++"""
++
++from copy import deepcopy
++
++from omegaconf import OmegaConf
++
++# Keys read by AgentEvolver driver code only — unknown to verl 0.9 dataclasses.
++AE_ROLLOUT_EXTRA_KEYS = (
++    "context_template",
++    "context_template_train_sp_action",
++    "custom_dataflow_cls",
++    "debug_llm_io",
++    "enable_request_id",
++    "max_env_len",
++    "max_env_worker",
++    "sparse",
++    "use_qwen3",
++)
++AE_MULTI_TURN_EXTRA_KEYS = ("completion_callback", "max_steps")
++AE_ACTOR_EXTRA_KEYS = ("off_cliprange_high",)
++
++
++def strip_ae_extension_keys(actor_rollout_ref_cfg):
++    """Return a deep copy of actor_rollout_ref with AE-only keys removed."""
++    cfg = deepcopy(actor_rollout_ref_cfg)
++    OmegaConf.set_struct(cfg, False)
++    rollout = cfg.get("rollout")
++    if rollout is not None:
++        for k in AE_ROLLOUT_EXTRA_KEYS:
++            rollout.pop(k, None)
++        mt = rollout.get("multi_turn")
++        if mt is not None:
++            for k in AE_MULTI_TURN_EXTRA_KEYS:
++                mt.pop(k, None)
++    actor = cfg.get("actor")
++    if actor is not None:
++        for k in AE_ACTOR_EXTRA_KEYS:
++            actor.pop(k, None)
++    OmegaConf.set_struct(cfg, True)
++    return cfg
++
++
++def strip_ae_extension_keys_full(full_cfg):
++    """Return a deep copy of the FULL trainer config with the
++    actor_rollout_ref subtree stripped of AE-only keys."""
++    cfg = deepcopy(full_cfg)
++    OmegaConf.set_struct(cfg, False)
++    cfg.actor_rollout_ref = strip_ae_extension_keys(cfg.actor_rollout_ref)
++    OmegaConf.set_struct(cfg, True)
++    return cfg
+diff --git a/config/script_config.yaml b/config/script_config.yaml
+index 74fbd06..2c4fa16 100644
+--- a/config/script_config.yaml
++++ b/config/script_config.yaml
+@@ -1,6 +1,6 @@
+ hydra:
+   searchpath:
+-    - file://external/config_fallback
++    - pkg://verl.trainer.config
+     - file://config
+ 
+ defaults:
+diff --git a/env_service/env_service.py b/env_service/env_service.py
+index f51bab4..aab43cc 100644
+--- a/env_service/env_service.py
++++ b/env_service/env_service.py
+@@ -140,7 +140,7 @@ class EnvService:
+         )
+ 
+         if not ray.is_initialized():
+-            ray.init(address='local')
++            ray.init(address='local', num_cpus=int(os.environ.get('ENV_SERVICE_NUM_CPUS', '128')), include_dashboard=False)
+         self.env_actors = {}
+         self.remote_env = {}
+         self.last_access_time = {}
+diff --git a/env_service/environments/appworld/appworld_env.py b/env_service/environments/appworld/appworld_env.py
+index 313108f..e571c21 100644
+--- a/env_service/environments/appworld/appworld_env.py
++++ b/env_service/environments/appworld/appworld_env.py
+@@ -19,6 +19,9 @@ limitations under the License.
+ from typing import Any, Dict, List
+ import re
+ import json
++import os
++import errno
++import resource
+ from copy import deepcopy
+ 
+ from fastapi.encoders import ENCODERS_BY_TYPE
+@@ -777,9 +780,6 @@ class AppworldEnv(BaseEnv):
+             template_params = {
+                 "main_user": self.world.task.supervisor,
+                 "app_descriptions": app_descriptions,
+-                "relevant_apis": str(
+-                    self.world.task.ground_truth.required_apis,
+-                ),
+             }
+             output_str = template.render(template_params)
+ 
+@@ -971,7 +971,40 @@ class AppworldEnv(BaseEnv):
+         observation = None
+ 
+         if isinstance(action, str):
+-            output = self.world.execute(action)
++            # AppWorld runs agent-written Python in this Ray worker. One
++            # RemoteEnv.step process grew to 3.36 TB in the failed run.
++            # Give each execution a
++            # bounded amount of *additional* virtual memory so AppWorld can
++            # return MemoryError as an ordinary tool result instead.
++            headroom_mb = int(os.environ.get("APPWORLD_STEP_MEMORY_HEADROOM_MB", "4096"))
++            if headroom_mb < 128:
++                raise ValueError("APPWORLD_STEP_MEMORY_HEADROOM_MB must be >= 128")
++            with open("/proc/self/statm", encoding="ascii") as statm:
++                current_vms = int(statm.read().split()[0]) * os.sysconf("SC_PAGE_SIZE")
++            old_soft, hard = resource.getrlimit(resource.RLIMIT_AS)
++            limit = current_vms + headroom_mb * 1024 * 1024
++            if hard != resource.RLIM_INFINITY:
++                limit = min(limit, hard)
++            if old_soft != resource.RLIM_INFINITY:
++                limit = min(limit, old_soft)
++            resource.setrlimit(resource.RLIMIT_AS, (limit, hard))
++            try:
++                try:
++                    output = self.world.execute(action)
++                except MemoryError:
++                    output = "Execution failed. Traceback:\nMemoryError: AppWorld step memory limit reached."
++                except OSError as exc:
++                    if exc.errno != errno.ENOMEM:
++                        raise
++                    output = "Execution failed. Traceback:\nOSError: AppWorld step memory limit reached."
++            finally:
++                resource.setrlimit(resource.RLIMIT_AS, (old_soft, hard))
++            if "MemoryError" in output or "memory limit reached" in output:
++                print(
++                    f"[appworld-step-memory-guard] task={self.task_id} "
++                    f"instance={self.instance_id} headroom_mb={headroom_mb}",
++                    flush=True,
++                )
+             if not self.simple:
+                 observation = "Output:\n```\n" + output + "```\n\n"
+             else:
+diff --git a/tests/test_cot_consistency.py b/tests/test_cot_consistency.py
+new file mode 100644
+index 0000000..a0291f0
+--- /dev/null
++++ b/tests/test_cot_consistency.py
+@@ -0,0 +1,589 @@
++"""Regression tests for Qwen3 thinking/CoT train-inference consistency.
++
++Tests the new LinearTokenCMT context manager and submit_completions adapter.
++Runs on CPU; HTTP responses are mocked.  Parent will repeat with real Qwen
++tokenizer and real vLLM on the remote node.
++
++Key invariants tested:
++  1. Second-call prompt token IDs == training prefix before the second
++     completion (including the first CoT in history).
++  2. Token source: completion tokens come from server completion_token_ids,
++     not re-tokenized text.
++  3. Loss mask: sampled tokens mask=1, headers/env mask=0.
++  4. Per-token logprobs are actual server values, not zeros.
++  5. Thinking-only/truncated action extraction returns empty, not reasoning.
++  6. No duplicated <think> tags in reconstructed content.
++  7. Corrupted/missing prompt/completion provenance fails closed.
++  8. Initial multi-message prelude tokenizes correctly.
++"""
++
++import itertools
++import os
++import sys
++import threading
++from pathlib import Path
++from unittest.mock import MagicMock, patch
++
++import pytest
++
++ROOT_DIR = Path(__file__).resolve().parents[1]
++if str(ROOT_DIR) not in sys.path:
++    sys.path.insert(0, str(ROOT_DIR))
++
++from agentevolver.utils.thinking import (
++    extract_action_content,
++    has_thinking_content,
++    merge_reasoning_and_content,
++)
++
++# ---------------------------------------------------------------------------
++# Helpers
++# ---------------------------------------------------------------------------
++
++def _make_completions_response(completion_token_ids, token_logprobs=None,
++                                text="", finish_reason="stop",
++                                prompt_token_ids=None):
++    """Build a synthetic vLLM /v1/completions JSON response."""
++    n = len(completion_token_ids)
++    if token_logprobs is None:
++        token_logprobs = [-0.1 * (i + 1) for i in range(n)]
++    tokens = [f"token_id:{tid}" for tid in completion_token_ids]
++    resp = {
++        "id": "cmpl-test-001",
++        "choices": [{
++            "text": text,
++            "finish_reason": finish_reason,
++            "logprobs": {
++                "tokens": tokens,
++                "token_logprobs": token_logprobs,
++            },
++            "token_ids": completion_token_ids,
++        }],
++        "usage": {"completion_tokens": n},
++    }
++    if prompt_token_ids is not None:
++        resp["choices"][0]["prompt_token_ids"] = prompt_token_ids
++    return resp
++
++
++def _make_chat_response(reasoning_content=None, content="action",
++                        token_ids=None, logprobs_tokens=None):
++    """Build a synthetic vLLM /v1/chat/completions JSON response."""
++    message = {"role": "assistant", "content": content}
++    if reasoning_content is not None:
++        message["reasoning_content"] = reasoning_content
++    if token_ids is None:
++        token_ids = list(range(100, 120))
++    if logprobs_tokens is None:
++        logprobs_tokens = [
++            {"token": f"token_id:{500 + i}", "logprob": -0.05,
++             "bytes": list(b"x")}
++            for i in range(5)
++        ]
++    return {
++        "id": "chatcmpl-test-001",
++        "choices": [{
++            "message": message,
++            "finish_reason": "stop",
++            "logprobs": {"content": logprobs_tokens},
++            "token_ids": token_ids,
++        }],
++        "usage": {"completion_tokens": len(token_ids)},
++        "prompt_token_ids": list(range(50)),
++    }
++
++
++def _make_minimal_manager():
++    from agentevolver.module.trainer.ae_async_llm_server_manager import (
++        BaAsyncLLMServerManager,
++    )
++    mgr = object.__new__(BaAsyncLLMServerManager)
++    mgr.model_name = "test-model"
++    mgr.addresses = ["http://localhost:8000"]
++    mgr._rr_lock = threading.Lock()
++    mgr._rr = itertools.cycle(mgr.addresses)
++    # Mock tokenizer for submit_completions decode fallback
++    mock_tok = MagicMock()
++    mock_tok.decode = MagicMock(return_value="decoded-text")
++    mgr.tokenizer = mock_tok
++    return mgr
++
++
++# ---------------------------------------------------------------------------
++# 1. submit_completions: token-ID prompt path
++# ---------------------------------------------------------------------------
++
++class TestSubmitCompletions:
++
++    @patch("requests.post")
++    def test_returns_completion_token_ids_and_logprobs(self, mock_post):
++        comp_ids = [10, 20, 30, 40, 50]
++        lps = [-0.1, -0.2, -0.3, -0.4, -0.5]
++        resp = MagicMock()
++        resp.json.return_value = _make_completions_response(
++            comp_ids, lps, text="hello", prompt_token_ids=[1, 2, 3])
++        resp.raise_for_status = MagicMock()
++        mock_post.return_value = resp
++
++        mgr = _make_minimal_manager()
++        result = mgr.submit_completions([1, 2, 3], {})
++
++        assert result["completion_token_ids"] == comp_ids
++        assert result["token_logprobs"] == lps
++        assert [t.token_id for t in result["tokens"]] == comp_ids
++        assert [t.logprob for t in result["tokens"]] == lps
++
++    @patch("requests.post")
++    def test_rejects_missing_token_ids(self, mock_post):
++        resp_data = _make_completions_response([10, 20], text="x")
++        del resp_data["choices"][0]["token_ids"]
++        resp = MagicMock()
++        resp.json.return_value = resp_data
++        resp.raise_for_status = MagicMock()
++        mock_post.return_value = resp
++
++        mgr = _make_minimal_manager()
++        with pytest.raises(ValueError, match="did not return token_ids"):
++            mgr.submit_completions([1], {})
++
++    @patch("requests.post")
++    def test_rejects_logprob_count_mismatch(self, mock_post):
++        resp_data = _make_completions_response([10, 20, 30])
++        resp_data["choices"][0]["logprobs"]["token_logprobs"] = [-0.1]  # only 1
++        resp = MagicMock()
++        resp.json.return_value = resp_data
++        resp.raise_for_status = MagicMock()
++        mock_post.return_value = resp
++
++        mgr = _make_minimal_manager()
++        with pytest.raises(ValueError, match="Logprob count"):
++            mgr.submit_completions([1], {})
++
++    @patch("requests.post")
++    def test_sends_token_id_prompt(self, mock_post):
++        prompt = [100, 200, 300]
++        resp = MagicMock()
++        resp.json.return_value = _make_completions_response([10], prompt_token_ids=prompt)
++        resp.raise_for_status = MagicMock()
++        mock_post.return_value = resp
++
++        mgr = _make_minimal_manager()
++        mgr.submit_completions(prompt, {"max_completion_tokens": 512})
++
++        payload = mock_post.call_args[1]["json"]
++        assert payload["prompt"] == prompt
++        assert payload["return_token_ids"] is True
++        assert "/v1/completions" in mock_post.call_args[0][0]
++
++
++# ---------------------------------------------------------------------------
++# 2. submit_chat_completions: thinking content merge (existing path)
++# ---------------------------------------------------------------------------
++
++class TestSubmitChatCompletionsThinking:
++
++    @patch("requests.post")
++    def test_reasoning_content_merged(self, mock_post):
++        resp = MagicMock()
++        resp.json.return_value = _make_chat_response(
++            reasoning_content="I think X", content="do_x()")
++        resp.raise_for_status = MagicMock()
++        mock_post.return_value = resp
++
++        mgr = _make_minimal_manager()
++        messages = [{"role": "user", "content": "hi"}]
++        result = mgr.submit_chat_completions(messages, {})
++        assert "<think>" in result["content"]
++        assert "I think X" in result["content"]
++        assert "do_x()" in result["content"]
++
++    @patch("requests.post")
++    def test_return_token_ids_always_requested(self, mock_post):
++        resp = MagicMock()
++        resp.json.return_value = _make_chat_response()
++        resp.raise_for_status = MagicMock()
++        mock_post.return_value = resp
++
++        mgr = _make_minimal_manager()
++        mgr.submit_chat_completions([{"role": "user", "content": "x"}], {})
++        payload = mock_post.call_args[1]["json"]
++        assert payload.get("return_token_ids") is True
++
++
++# ---------------------------------------------------------------------------
++# 3. Thinking utility functions
++# ---------------------------------------------------------------------------
++
++class TestThinkingUtils:
++
++    def test_extract_strips_think_block(self):
++        content = "<think>\nReason.\n</think>\n```python\ndo_x()\n```"
++        assert "<think>" not in extract_action_content(content)
++        assert "do_x()" in extract_action_content(content)
++
++    def test_extract_thinking_only_returns_empty(self):
++        """Thinking-only generation must return empty, not the reasoning."""
++        content = "<think>\nI should do X but I don't know how.\n</think>"
++        result = extract_action_content(content)
++        assert result == "", f"Expected empty, got: {result!r}"
++
++    def test_extract_truncated_think_returns_empty(self):
++        """Truncated <think> without closing tag must not leak reasoning."""
++        content = "<think>\nPartial reasoning without end"
++        result = extract_action_content(content)
++        assert "Partial reasoning" not in result
++
++    def test_no_think_passthrough(self):
++        assert extract_action_content("plain action") == "plain action"
++
++    def test_merge_no_duplicate_tags(self):
++        merged = merge_reasoning_and_content("reason", "action")
++        assert merged.count("<think>") == 1
++        assert merged.count("</think>") == 1
++
++    def test_extract_is_inverse_of_merge(self):
++        merged = merge_reasoning_and_content("reason", "action here")
++        assert extract_action_content(merged) == "action here"
++
++
++# ---------------------------------------------------------------------------
++# 4. add_nothink logic
++# ---------------------------------------------------------------------------
++
++
++
++# ---------------------------------------------------------------------------
++# 5. LinearTokenCMT — requires a tokenizer with chat template
++# ---------------------------------------------------------------------------
++
++def _try_load_tokenizer():
++    try:
++        from transformers import AutoTokenizer
++        model_ids = [os.environ.get("COT_TOKENIZER_PATH")]
++        for model_id in filter(None, model_ids):
++            try:
++                tok = AutoTokenizer.from_pretrained(
++                    model_id, trust_remote_code=False, local_files_only=True)
++                if hasattr(tok, "apply_chat_template"):
++                    return tok
++            except Exception:
++                continue
++    except ImportError:
++        pass
++    return None
++
++
++_TOKENIZER = _try_load_tokenizer()
++_skip_no_tokenizer = pytest.mark.skipif(
++    _TOKENIZER is None,
++    reason="No tokenizer with chat_template; run on remote with model access")
++
++
++def _build_mock_config():
++    from omegaconf import OmegaConf
++    return OmegaConf.create({
++        "actor_rollout_ref": {
++            "rollout": {
++                "response_length": 512,
++                "max_model_len": 4096,
++                "max_env_len": 1024,
++                "context_template": "linear_tokens",
++                "multi_turn": {"max_sample_per_task": 10},
++            },
++            "model": {"path": "test"},
++        },
++        "data": {
++            "max_prompt_length": 3072,
++            "max_response_length": 1024,
++        },
++        "env_service": {"env_feedin_preference": "code"},
++        "exp_manager": {"experience_template": "{}"},
++    })
++
++
++@_skip_no_tokenizer
++class TestLinearTokenCMT:
++
++    def _make_cmt(self):
++        from agentevolver.module.context_manager.cmt_linear_tokens import LinearTokenCMT
++        self._cmt_for_fake = LinearTokenCMT(_build_mock_config(), _TOKENIZER)
++        return self._cmt_for_fake
++
++    def _fake_completion(self, text):
++        """Encode text as if it were a completion (tokens after gen prompt)."""
++        ids = _TOKENIZER.encode(text, add_special_tokens=False)
++        lps = [-0.05 * (i + 1) for i in range(len(ids))]
++        from agentevolver.module.trainer.ae_async_llm_server_manager import TokenAndProb
++        tokens = [TokenAndProb(token_id=tid, logprob=lp)
++                  for tid, lp in zip(ids, lps)]
++        return {
++            "role": "assistant",
++            "content": text,
++            "tokens": tokens,
++            "token_logprobs": lps,
++            "completion_token_ids": ids,
++            "prompt_token_ids": list(self._cmt_for_fake.token_ids),
++            "finish_reason": "stop",
++            "request_id": "test",
++        }
++
++    def test_init_tokenizes_with_gen_prompt(self):
++        cmt = self._make_cmt()
++        init = [
++            {"role": "system", "content": "You are helpful."},
++            {"role": "user", "content": "Do the task."},
++        ]
++        cmt.save_init_input(init)
++        assert len(cmt.token_ids) > 0
++        # Should end with generation prompt (contains assistant header)
++        decoded = _TOKENIZER.decode(cmt.token_ids)
++        assert "assistant" in decoded
++
++    def test_prepare_returns_token_ids(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        assert isinstance(prompt, list)
++        assert all(isinstance(x, int) for x in prompt)
++        assert prompt == cmt.token_ids
++
++    def test_second_prompt_equals_training_prefix(self):
++        """Core consistency test: step 2 prompt IDs == training prompt_ids."""
++        cmt = self._make_cmt()
++        init = [{"role": "user", "content": "Solve it."}]
++        cmt.save_init_input(init)
++
++        # Step 1
++        prompt1 = cmt.prepare_next_llm_context()
++        comp1_text = "I need to list files.\n</think>\n```python\nos.listdir('.')\n```<|im_end|>"
++        comp1 = self._fake_completion(comp1_text)
++        cmt.save_llm_output(comp1, input_msg_ref=prompt1)
++        cmt.save_env_output({"role": "user", "content": "['f1.txt', 'f2.txt']"})
++
++        # Step 2
++        prompt2 = cmt.prepare_next_llm_context()
++
++        comp2_text = "Read f1.txt now.\n</think>\n```python\nopen('f1.txt').read()\n```<|im_end|>"
++        comp2 = self._fake_completion(comp2_text)
++        cmt.save_llm_output(comp2, input_msg_ref=prompt2)
++
++        # Remove trailing env (simulates agent_flow.remove_last_context)
++        # In this test there's no trailing env after step 2's completion
++        cmt.remove_last_context()
++
++        samples = cmt.group_tokenize()
++        assert len(samples) == 1
++        sample = samples[0]
++
++        # Training prompt = everything before first completion
++        # Step 2's prompt = prompt2 (token IDs sent to the model)
++        # The first completion_span starts at len(prompt1)
++        first_span_start = cmt._completion_spans[0][0]
++        training_prefix = sample.input_ids[:first_span_start]
++
++        assert training_prefix == prompt1, (
++            f"Training prefix ({len(training_prefix)} tokens) != "
++            f"step 1 prompt ({len(prompt1)} tokens)")
++
++        # Check that step 2's prompt is fully contained in input_ids
++        second_span_start = cmt._completion_spans[1][0]
++        training_prefix_step2 = sample.input_ids[:second_span_start]
++        assert training_prefix_step2 == prompt2, (
++            f"Training prefix before step 2 ({len(training_prefix_step2)}) != "
++            f"step 2 prompt ({len(prompt2)})")
++
++    def test_loss_mask_completions_only(self):
++        """Loss mask must be 1 only for completion spans."""
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++
++        prompt1 = cmt.prepare_next_llm_context()
++        comp1 = self._fake_completion("thought\n</think>\naction1<|im_end|>")
++        cmt.save_llm_output(comp1, input_msg_ref=prompt1)
++        cmt.save_env_output({"role": "user", "content": "result"})
++
++        prompt2 = cmt.prepare_next_llm_context()
++        comp2 = self._fake_completion("thought2\n</think>\naction2<|im_end|>")
++        cmt.save_llm_output(comp2, input_msg_ref=prompt2)
++        cmt.remove_last_context()
++
++        samples = cmt.group_tokenize()
++        sample = samples[0]
++
++        # Check: prompt portion has all-zero loss mask
++        assert all(m == 0 for m in sample.prompt_loss_mask)
++
++        # Check: in response portion, only completion spans have mask=1
++        split = cmt._completion_spans[0][0]
++        for (start, end) in cmt._completion_spans:
++            for i in range(start - split, min(end - split, len(sample.response_loss_mask))):
++                assert sample.response_loss_mask[i] == 1, \
++                    f"Expected mask=1 at response position {i}"
++
++        # Check: between completions (env + gen_prompt), mask=0
++        span1_end = cmt._completion_spans[0][1] - split
++        span2_start = cmt._completion_spans[1][0] - split
++        for i in range(span1_end, span2_start):
++            assert sample.response_loss_mask[i] == 0, \
++                f"Expected mask=0 at env/header position {i}"
++
++    def test_logprobs_are_server_values(self):
++        """Completion logprobs must be actual server values, not zeros."""
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++
++        prompt = cmt.prepare_next_llm_context()
++        comp = self._fake_completion("reason\n</think>\nact<|im_end|>")
++        cmt.save_llm_output(comp, input_msg_ref=prompt)
++
++        logprobs = cmt._completion_logprobs[0]
++        assert any(lp != 0.0 for lp in logprobs), \
++            "All logprobs are 0.0 — server values were not preserved"
++
++    def test_env_receives_action_only(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        comp = self._fake_completion(
++            "Secret reasoning.\n</think>\n```python\nprint('hello')\n```<|im_end|>")
++        cmt.save_llm_output(comp, input_msg_ref=prompt)
++
++        action = cmt.prepare_world_interaction()
++        assert "<think>" not in action
++        assert "Secret reasoning" not in action
++        assert "print('hello')" in action
++
++    def test_thinking_only_returns_empty_action(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        comp = self._fake_completion("Only reasoning here.\n</think><|im_end|>")
++        cmt.save_llm_output(comp, input_msg_ref=prompt)
++
++        action = cmt.prepare_world_interaction()
++        assert action == "" or "reasoning" not in action.lower()
++
++    def test_missing_completion_ids_fails(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++
++        with pytest.raises(ValueError, match="Missing completion_token_ids"):
++            cmt.save_llm_output({
++                "role": "assistant",
++                "content": "x",
++                "tokens": [],
++                "completion_token_ids": None,
++                "prompt_token_ids": None,
++            }, input_msg_ref=prompt)
++
++    def test_prompt_mismatch_fails(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++
++        comp = self._fake_completion("reason\n</think>\nact<|im_end|>")
++        comp["prompt_token_ids"] = [999, 888, 777]  # wrong
++
++        with pytest.raises(ValueError, match="Prompt token ID mismatch"):
++            cmt.save_llm_output(comp, input_msg_ref=prompt)
++
++    def test_logprob_count_mismatch_fails(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++
++        ids = _TOKENIZER.encode("test<|im_end|>", add_special_tokens=False)
++        from agentevolver.module.trainer.ae_async_llm_server_manager import TokenAndProb
++        tokens = [TokenAndProb(token_id=tid, logprob=-0.1) for tid in ids[:1]]
++        with pytest.raises(ValueError, match="Logprob count"):
++            cmt.save_llm_output({
++                "role": "assistant",
++                "content": "test",
++                "tokens": tokens,
++                "completion_token_ids": ids,
++                "prompt_token_ids": None,
++            }, input_msg_ref=prompt)
++
++    def test_initial_multi_message_prelude(self):
++        """System + user init messages must all be in token_ids."""
++        cmt = self._make_cmt()
++        init = [
++            {"role": "system", "content": "You are an expert agent."},
++            {"role": "user", "content": "Complete the task below:\nList files."},
++        ]
++        cmt.save_init_input(init)
++
++        decoded = _TOKENIZER.decode(cmt.token_ids)
++        assert "expert agent" in decoded
++        assert "List files" in decoded
++
++    def test_no_duplicated_think_tags(self):
++        """Full content should have exactly one <think> and one </think>."""
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        comp = self._fake_completion(
++            "my reasoning\n</think>\nmy action<|im_end|>")
++        cmt.save_llm_output(comp, input_msg_ref=prompt)
++
++        content = cmt.full_context[-1].content
++        assert content.count("<think>") == 1, f"Got {content.count('<think>')} <think> tags"
++        assert content.count("</think>") == 1, f"Got {content.count('</think>')} </think> tags"
++
++    def test_remove_last_context_truncates(self):
++        """remove_last_context must remove env turn tokens."""
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        comp = self._fake_completion("r\n</think>\na<|im_end|>")
++        cmt.save_llm_output(comp, input_msg_ref=prompt)
++
++        len_before_env = len(cmt.token_ids)
++        cmt.save_env_output({"role": "user", "content": "env output"})
++        assert len(cmt.token_ids) > len_before_env
++
++        cmt.remove_last_context()
++        assert len(cmt.token_ids) == len_before_env
++
++    def test_missing_server_prompt_fails(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        comp = self._fake_completion("reason\n</think>\nact<|im_end|>")
++        comp["prompt_token_ids"] = None
++        with pytest.raises(ValueError, match="Missing server prompt"):
++            cmt.save_llm_output(comp, input_msg_ref=prompt)
++
++    def test_mutated_training_prefix_fails(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        cmt.save_llm_output(self._fake_completion("reason\n</think>\nact<|im_end|>"), input_msg_ref=prompt)
++        cmt.token_ids[0] = 999
++        with pytest.raises(ValueError, match="Training prefix differs"):
++            cmt.group_tokenize()
++
++    def test_storage_budget_stops_before_next_sampling(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        cmt.config.data.max_response_length = 32
++        assert not cmt.check_context_token_num_safe(prompt)
++
++    def test_truncated_thought_code_is_never_an_action(self):
++        cmt = self._make_cmt()
++        cmt.save_init_input([{"role": "user", "content": "Go."}])
++        prompt = cmt.prepare_next_llm_context()
++        comp = self._fake_completion("Maybe use this code: ```python\nprint('inside thought')\n```")
++        comp["finish_reason"] = "length"
++        cmt.save_llm_output(comp, input_msg_ref=prompt)
++        assert cmt.prepare_world_interaction() == ""
++        original_end = len(cmt.token_ids)
++        cmt.save_env_output({"role": "user", "content": "No executable action."})
++        assert cmt.token_ids[original_end] == _TOKENIZER.eos_token_id
++        prompt2 = cmt.prepare_next_llm_context()
++        cmt.save_llm_output(self._fake_completion("done\n</think>\nnext<|im_end|>"), input_msg_ref=prompt2)
++        sample = cmt.group_tokenize()[0]
++        assert sample.loss_mask[original_end] == 0
++        assert sample.input_ids[:cmt._completion_spans[1][0]] == prompt2

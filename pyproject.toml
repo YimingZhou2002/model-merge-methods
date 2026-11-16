@@ -1,0 +1,10 @@
+[project]
+name = "model-merge-methods-reproduction"
+version = "0.1.0"
+description = "Reproduction code for MMR, TSG-TV, and BCM checkpoint merges"
+requires-python = ">=3.10"
+authors = [{name = "yimingzhou2002"}]
+dependencies = ["numpy", "scipy", "torch", "safetensors", "PyYAML"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

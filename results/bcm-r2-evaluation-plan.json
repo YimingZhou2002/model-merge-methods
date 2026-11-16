@@ -1,0 +1,981 @@
+{
+  "code_sha256": {
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/appworld_checkpoint_eval/rollout_appworld.sh": "e230ac9618f726a5b19b6576c7311d079dfe08bab1fae1e74678f314e0015ebd",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/appworld_checkpoint_eval/runtime_manifest.json": "f843a70ffc6ea3dfc7dc148acabb630fb82bd53f35d77af0d549b8c30d38fe79",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/config.json": "343af115f2d72300a3c77ee762b9de7ebc88449e5b1c2cc74d28da2d6116d118",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/core.py": "dd1ea921e1f1d5e363f4d04c05dd44351bc6bb28d8e76b8c2afbbc7e337279a9",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/doctor.py": "cbdad4c7f45dba9dc13e4f60be29bd0be37ef0e149fec44861f31fff7c8e82ea",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/merge.py": "ae6343d41d9459b3cc168ad4bd6cae46ee5bfe54521b561c7aa945124f415d00",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/prepare_assets.py": "2e58776de73759d9578170fd9af60dde0ff095c9e5e86568bb06863ca18da641",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/study.py": "29da3e5f8bf2969485f4534f569e0bc21fd289b6fd390aee1658d41a5849d629",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/model_merge/weighted_merge.py": "a15f360d6ee39ee1e1b9bd9b4ee25deb6ad3bfd5213a137d6df3ac546d17b117",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/PLAN.md": "a4795e2ddeb3152afd43bbc55ae9a6521dde47112107698beba6fabe8dd4f594",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/ROUND2_PLAN.md": "6570d9e71f31d944f34f53310f4171c89f6e17a60073146ae3381cc775272c64",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/__init__.py": "11de276ee9f49f0a5703adcde1821269ce8b186ec657b336c60c04028c737330",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/audit_evaluation.py": "195025f3b6748594bef8625caf79f1b84c8270c9c789516fa2ede4e42685a797",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/audit_exports.py": "4b957ef25a0e241d8ae5e538e12c708c3bc0ab46f617c021ea42f7df459ee827",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/audit_round2_models.py": "d0b2f1e734b66a79b290f2daddbb51bf4c6cfe28121c4ed6a2d114fa7dfa46b9",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/compare.py": "8a5a8bc702e60ce66b0d2dffe43c32922170e1ebbf88eace3c94a59ce5d8f81f",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/evaluate_round2.py": "3b600df1c06ed5d568f925a6f6f7367aa15a3ee0a73064b179639dacb6796625",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/methods.py": "764acdf1d5ec7a9b06d50e766e48817ed7ee2909bee7a4b3148a57491d50ef39",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/round2.py": "86b9bbcf4c183b69307c30029d4e2576c02f129ef9d4a7c5a032888079a374c2",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/run.py": "421ecf4a2a364e12c409afd81fbed0d7181efd1c5efea5bb3817c26be3f79a60"
+  },
+  "config_sha256": "2cac94cf05a63af2a0dfc7619935e68f7350fec326a544d6b742034bcd611b99",
+  "environment_sha256": "e7cf6a9463a2781872d00b6822f1b5b57ba7e9c5f914deeeda2df26995c6fb15",
+  "expected_prompt_keys": [
+    "03fa0a06baf8dd255b9091abdf6dac23379473cd2559582def0d4919ce58b368",
+    "15bb248f120ddd841bec9d1bafd181bf9801e1a0d67b56f449172f80181bb7d5",
+    "1f571eb061878583b4153d7c8077b27c6ccf01740b6752df7a18076320fe81eb",
+    "20d441d8cc75ab94cff86293cff4774324d3420fd041007c0da4b91178ca9b6a",
+    "2be2452c600461eb7ef5d54b0a108082c3e9223c948a9a71c0100dfeb1971ca0",
+    "321ccaa755ec6ffdb1d666e63a9eca3c0eaed2aea472036fdba0b6e097cbb68e",
+    "336997809b7b6e9fbd55604c10441a4bf27f3f48b0ccceecaf70cbdab9d40a35",
+    "362ac01be1f6509a6ff339ae41f5946821d45015ca27c637426fe416966d8709",
+    "38a3240f3f506bf670d7a58d67a7923b0d9b3467e0f8e05285a108c4ebc30ea1",
+    "3b87eb9f4fb32fa4194c73b86073d43f263cfe2a3a6d0376b8857bd1ab0685c8",
+    "3d5e20399a2af18e1d820840990a360bc0cd09d66224adc9c27e9feb1442a922",
+    "48da1188259ac60168ef8af3301db3d791d5f8224720897018d1de75ae747309",
+    "543fda26d3bdfbaa0a848964f2ee78c3768e33dcc475a117bb90e2fda02cc455",
+    "556ee0298736cfc5e4772ee844d3376581cb68970d090fb705a52656e072a852",
+    "5905dcdf76ae25f62f531b58d4d86864403f316ab6a9ab001b2d774b48870faf",
+    "5c92809e016f75e2ec7e3ce5be042611377f416ed1e410e98c005bf6e8232149",
+    "5eb9498d6403d4a7df84ed41ac294edfdbeb38fbd2f389b058146ed6ffda35c9",
+    "5efc8f8213036b571a913cfe4817251630686af6aa2b0a34ca8406e27b7419cf",
+    "5f956b195976814023d739d621794bf07de361ef1143e2c780f7e9bf30e90fcb",
+    "630dffdb1f2d1a3137253b98eaa726f249b76469f669bd66aef92ef19a089c1f",
+    "6d8b6efab04565949f338e4d44a289fc4856e6ae7089fbdf1da57d36944c793c",
+    "738c63b49d833a44cf367a58c854890b99e365696c0586fb4aceed7cef8e44a0",
+    "73bffd850c51b533cdf832b4ded8004fc841f06d5a1c30bce5025184d61245cd",
+    "75568c50c8827a0d5778389e0b7ae984a3cdcdc3564e39e0cb5f1f744b7497b4",
+    "7d300022887bbe11540ff9907a4cbe96e14524bf658023570193e8826d313a10",
+    "7d826bcb78e262c477932e8f7219d30c1059198625d3ab84d7cc6155c4aa5d34",
+    "819e0bdbb84f086c0cf3595c94148dbd7d26d44d76412207a61047ba70213129",
+    "82a41897133bfe443d9bc556be45b49d07ed9d3fc51329b43a388efab043112c",
+    "87fcc2024a297076cfa426f3b03b2861101eb2a224ee02c3c684358721aa11e1",
+    "8c1337bb40d74bc7a10579bfc04640f741a38092df763de5f6c677f292a0f68a",
+    "8f6050fc1e66fe8afbd6351c0aebbfec5b31634d986a5679d48936c860b97875",
+    "919c21c9eec3eae94cc0dfe1c3be2c016d8469b7dc1d58988dd03bed4340f63b",
+    "92896d40572ae6ac0fc1437940976b9a47280a19ff61c96c2781eae5da9b6903",
+    "96fce0e1c6905d240afc417cb5ef6637ffa30ed3fe27ab87545e8b5043aa8f0f",
+    "995a153c4f163d0fa10898d66a457fe1019d67a49f47c0883544865c618206d3",
+    "a981c89e9196264171ae16556ecb760ddfbac4cde2f6ece4b194f42507dfcb95",
+    "aa14b07b4d1dfa5ec273a1b1d829bc437263f2740a9238d239dd5c294fab5afe",
+    "ac8e631a68dfb6e9e5014647cc4b25a8e02147f12d5700f9c98d9021128f72cb",
+    "b5f4a82ff2bd8016c18b8f120a96264c235d6637b2302cd04625dc265f518843",
+    "b696cd3f6bb423cc40537edcde0382c048691a25c72aecdcc415ec41416630d8",
+    "b74b625488331244dcbfe1ab034b01f386b4bee3dafd344e07d5852b8e963157",
+    "b765a8fcacf9a792e8ca25dc97a33a0c21dbb1f207a69c438dd9087685af0d7e",
+    "bd2dc0edfac5febd75666cbf325188060897009cbfef3ad599c7fb98378bb5c8",
+    "bd866bb5ad2dd55872bd73a787f4c816f023cbf99ac332f0ec1230c61adbc058",
+    "c5d2a565146b88880b8ece7b8c373f2e1348555ec4bb6907668b2bda26a96d84",
+    "d1bcae856fae6698f5b56cea72bec97623bb39edfa69133caf725ae02a85c59e",
+    "d6464b8b4c42a4c11cbd89b3b00ba54e6afd3e656924e6dd120fbff2f30ea0d3",
+    "d7746dc941869915e07c122b9513e95ea5a1af5724f986484eec84ec14c4ddba",
+    "d7dcc585496bc2a80e03aeea554cd9dd40413e4bfa4989e95a18faed028665b9",
+    "e056fda4ee58205f2b2fc5a28af3e3cd59465f83ac8e666e6b82bb922cf3523e",
+    "e0be58f7ce02d9e735443207f7315b98057bc4092238208a14c484e963395a45",
+    "e694fe9e43312c559091303fe8024811521b075059284f0fade1881ca37fa62a",
+    "ecee50c8cceaa303d7529bedca55d350958b0ea8ace8be8d3cd44d5f19d65959",
+    "ef98e5aa91d2b61534cdf58c86491605ccb604201549d81a8b6a3e29a328f22a",
+    "efad2ddc1323ac5f8ae93cdc851d730595b2614f123d5b5a700739121f1b46f5",
+    "fd76931b1dc67eed29b1571fc26e9736e5fc973c8d3c31e39aac2ddce9df0fa4",
+    "fdef4a5353eaf4c808de9a0e23cbbc2af7ffd158efc915fa3da6bbdff897f2d1"
+  ],
+  "independent_model_audit_sha256": "deb390c240d9a0203794e9a101158d86bd82f1b0d3fcc0f36b4d5096b828cae6",
+  "inputs_sha256": "1cbf3b0c21978a1ded35857cbd0bb98820fae7ee3ad53de8acb1e6443a2abb6d",
+  "interpretation": "Second development round, not holdout confirmation; one complete common-seed session per model.",
+  "model_identities": {
+    "bcm_linear_nm": {
+      "config_sha256": "41e2f0805cd2cd4061ba80ee65bb0a0d200345472d428e4bb9c22bdde0e5ebdc",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/bcm_linear_nm",
+      "shards": {
+        "model-00001-of-00032.safetensors": {
+          "bytes": 3111649408,
+          "mtime_ns": 1794320537531867715
+        },
+        "model-00002-of-00032.safetensors": {
+          "bytes": 3111649416,
+          "mtime_ns": 1794320570193309843
+        },
+        "model-00003-of-00032.safetensors": {
+          "bytes": 1677785560,
+          "mtime_ns": 1794320589185619829
+        },
+        "model-00004-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794320604479313680
+        },
+        "model-00005-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320622425980155
+        },
+        "model-00006-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320637516305860
+        },
+        "model-00007-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320653155436332
+        },
+        "model-00008-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320669904293469
+        },
+        "model-00009-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320684206651868
+        },
+        "model-00010-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320698732516630
+        },
+        "model-00011-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320714815007388
+        },
+        "model-00012-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794320730154396087
+        },
+        "model-00013-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320744800014554
+        },
+        "model-00014-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320760439347689
+        },
+        "model-00015-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320775094522293
+        },
+        "model-00016-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320789649814392
+        },
+        "model-00017-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320805541810685
+        },
+        "model-00018-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320820651892876
+        },
+        "model-00019-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320834978934866
+        },
+        "model-00020-of-00032.safetensors": {
+          "bytes": 1929466112,
+          "mtime_ns": 1794320850594039528
+        },
+        "model-00021-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320865952227701
+        },
+        "model-00022-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320880626213489
+        },
+        "model-00023-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320896164289490
+        },
+        "model-00024-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320911261688995
+        },
+        "model-00025-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320925751740773
+        },
+        "model-00026-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320942101075035
+        },
+        "model-00027-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320957481300121
+        },
+        "model-00028-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320971768610279
+        },
+        "model-00029-of-00032.safetensors": {
+          "bytes": 1929466104,
+          "mtime_ns": 1794320987554742614
+        },
+        "model-00030-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794321001457326684
+        },
+        "model-00031-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794321014977206346
+        },
+        "model-00032-of-00032.safetensors": {
+          "bytes": 1929466080,
+          "mtime_ns": 1794321030654440008
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "bcm_relative_nm": {
+      "config_sha256": "41e2f0805cd2cd4061ba80ee65bb0a0d200345472d428e4bb9c22bdde0e5ebdc",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/bcm_relative_nm",
+      "shards": {
+        "model-00001-of-00032.safetensors": {
+          "bytes": 3111649408,
+          "mtime_ns": 1794321059130375202
+        },
+        "model-00002-of-00032.safetensors": {
+          "bytes": 3111649416,
+          "mtime_ns": 1794321070598402603
+        },
+        "model-00003-of-00032.safetensors": {
+          "bytes": 1677785560,
+          "mtime_ns": 1794321079052928943
+        },
+        "model-00004-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794321085761438586
+        },
+        "model-00005-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794321092873402351
+        },
+        "model-00006-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794321099606977475
+        },
+        "model-00007-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321106143051072
+        },
+        "model-00008-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794321114333715498
+        },
+        "model-00009-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794321121669977782
+        },
+        "model-00010-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321127886233229
+        },
+        "model-00011-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794321133852406986
+        },
+        "model-00012-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794321140914358440
+        },
+        "model-00013-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321147241007750
+        },
+        "model-00014-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794321153331915944
+        },
+        "model-00015-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794321159199683745
+        },
+        "model-00016-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321165424720037
+        },
+        "model-00017-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794321173498460791
+        },
+        "model-00018-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794321180795823837
+        },
+        "model-00019-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321186035039055
+        },
+        "model-00020-of-00032.safetensors": {
+          "bytes": 1929466112,
+          "mtime_ns": 1794321192419294643
+        },
+        "model-00021-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794321199737293109
+        },
+        "model-00022-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321206305460464
+        },
+        "model-00023-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794321213769966385
+        },
+        "model-00024-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794321220917698343
+        },
+        "model-00025-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321227428399597
+        },
+        "model-00026-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794321234692539976
+        },
+        "model-00027-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794321240867541066
+        },
+        "model-00028-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794321247200634975
+        },
+        "model-00029-of-00032.safetensors": {
+          "bytes": 1929466104,
+          "mtime_ns": 1794321254834107653
+        },
+        "model-00030-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794321260465248453
+        },
+        "model-00031-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794321266727021416
+        },
+        "model-00032-of-00032.safetensors": {
+          "bytes": 1929466080,
+          "mtime_ns": 1794321273504999221
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "ck280": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-280",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794193429319248468
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794192324132034619
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "drr_nm": {
+      "config_sha256": "41e2f0805cd2cd4061ba80ee65bb0a0d200345472d428e4bb9c22bdde0e5ebdc",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/drr_nm",
+      "shards": {
+        "model-00001-of-00032.safetensors": {
+          "bytes": 3111649408,
+          "mtime_ns": 1794320533793584006
+        },
+        "model-00002-of-00032.safetensors": {
+          "bytes": 3111649416,
+          "mtime_ns": 1794320566721545915
+        },
+        "model-00003-of-00032.safetensors": {
+          "bytes": 1677785560,
+          "mtime_ns": 1794320587271923141
+        },
+        "model-00004-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794320602291745129
+        },
+        "model-00005-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320620041822920
+        },
+        "model-00006-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320635315521948
+        },
+        "model-00007-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320650824008782
+        },
+        "model-00008-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320667656063232
+        },
+        "model-00009-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320682289760111
+        },
+        "model-00010-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320696761518530
+        },
+        "model-00011-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320712457371408
+        },
+        "model-00012-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794320728041029727
+        },
+        "model-00013-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320742579329070
+        },
+        "model-00014-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320758344505438
+        },
+        "model-00015-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320773121833558
+        },
+        "model-00016-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320787676441836
+        },
+        "model-00017-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320803089130750
+        },
+        "model-00018-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320818544776699
+        },
+        "model-00019-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320833011839738
+        },
+        "model-00020-of-00032.safetensors": {
+          "bytes": 1929466112,
+          "mtime_ns": 1794320848256151454
+        },
+        "model-00021-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320863763023228
+        },
+        "model-00022-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320878382630018
+        },
+        "model-00023-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320893879409802
+        },
+        "model-00024-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320909209200748
+        },
+        "model-00025-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320923517544073
+        },
+        "model-00026-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320939638421647
+        },
+        "model-00027-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320955242986213
+        },
+        "model-00028-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320969766453679
+        },
+        "model-00029-of-00032.safetensors": {
+          "bytes": 1929466104,
+          "mtime_ns": 1794320985370074978
+        },
+        "model-00030-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794320999547886908
+        },
+        "model-00031-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794321013072070659
+        },
+        "model-00032-of-00032.safetensors": {
+          "bytes": 1929466080,
+          "mtime_ns": 1794321028178268594
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "qis_nm": {
+      "config_sha256": "41e2f0805cd2cd4061ba80ee65bb0a0d200345472d428e4bb9c22bdde0e5ebdc",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/qis_nm",
+      "shards": {
+        "model-00001-of-00032.safetensors": {
+          "bytes": 3111649408,
+          "mtime_ns": 1794320530097668457
+        },
+        "model-00002-of-00032.safetensors": {
+          "bytes": 3111649416,
+          "mtime_ns": 1794320563213194377
+        },
+        "model-00003-of-00032.safetensors": {
+          "bytes": 1677785560,
+          "mtime_ns": 1794320585407694932
+        },
+        "model-00004-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794320600175246631
+        },
+        "model-00005-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320617695701271
+        },
+        "model-00006-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320633310073781
+        },
+        "model-00007-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320648683845569
+        },
+        "model-00008-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320665394756427
+        },
+        "model-00009-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320680466040250
+        },
+        "model-00010-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320694789166634
+        },
+        "model-00011-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320710167864377
+        },
+        "model-00012-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794320726007284292
+        },
+        "model-00013-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320740530746385
+        },
+        "model-00014-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320756278871027
+        },
+        "model-00015-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320771154205207
+        },
+        "model-00016-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320785705675833
+        },
+        "model-00017-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320800736214270
+        },
+        "model-00018-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320816495015436
+        },
+        "model-00019-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320831036314819
+        },
+        "model-00020-of-00032.safetensors": {
+          "bytes": 1929466112,
+          "mtime_ns": 1794320845907768038
+        },
+        "model-00021-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320861607022965
+        },
+        "model-00022-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320876437786064
+        },
+        "model-00023-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320891784639526
+        },
+        "model-00024-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320907273388318
+        },
+        "model-00025-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320921467435346
+        },
+        "model-00026-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794320937312142884
+        },
+        "model-00027-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794320953137128392
+        },
+        "model-00028-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794320967870042011
+        },
+        "model-00029-of-00032.safetensors": {
+          "bytes": 1929466104,
+          "mtime_ns": 1794320983102098873
+        },
+        "model-00030-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794320997658043491
+        },
+        "model-00031-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794321011131943156
+        },
+        "model-00032-of-00032.safetensors": {
+          "bytes": 1929466080,
+          "mtime_ns": 1794321025817472735
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "tsg_tv": {
+      "config_sha256": "41e2f0805cd2cd4061ba80ee65bb0a0d200345472d428e4bb9c22bdde0e5ebdc",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/runs/qwen3-14b-dev8-v2/models/tsg_tv",
+      "shards": {
+        "model-00001-of-00032.safetensors": {
+          "bytes": 3111649408,
+          "mtime_ns": 1794280150294441131
+        },
+        "model-00002-of-00032.safetensors": {
+          "bytes": 3111649416,
+          "mtime_ns": 1794280252569151672
+        },
+        "model-00003-of-00032.safetensors": {
+          "bytes": 1677785560,
+          "mtime_ns": 1794280308576186776
+        },
+        "model-00004-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794280363080278338
+        },
+        "model-00005-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794280425787742815
+        },
+        "model-00006-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794280481610711839
+        },
+        "model-00007-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794280536151563637
+        },
+        "model-00008-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794280598452106023
+        },
+        "model-00009-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794280651384904857
+        },
+        "model-00010-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794280705155885745
+        },
+        "model-00011-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794280766687003947
+        },
+        "model-00012-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794280820495927920
+        },
+        "model-00013-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794280873791378039
+        },
+        "model-00014-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794280936962887076
+        },
+        "model-00015-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794280992164867360
+        },
+        "model-00016-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794281045386815860
+        },
+        "model-00017-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794281105886301061
+        },
+        "model-00018-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794281160242888811
+        },
+        "model-00019-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794281213722168313
+        },
+        "model-00020-of-00032.safetensors": {
+          "bytes": 1929466112,
+          "mtime_ns": 1794281275639677079
+        },
+        "model-00021-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794281330838138521
+        },
+        "model-00022-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794281380986037650
+        },
+        "model-00023-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794281441732864132
+        },
+        "model-00024-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794281494305378349
+        },
+        "model-00025-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794281545645724428
+        },
+        "model-00026-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794281607712346944
+        },
+        "model-00027-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794281660634047642
+        },
+        "model-00028-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794281711859612281
+        },
+        "model-00029-of-00032.safetensors": {
+          "bytes": 1929466104,
+          "mtime_ns": 1794281771879469050
+        },
+        "model-00030-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794281825862985484
+        },
+        "model-00031-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794281877363931082
+        },
+        "model-00032-of-00032.safetensors": {
+          "bytes": 1929466080,
+          "mtime_ns": 1794281934905407654
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "tsg_tv_norm": {
+      "config_sha256": "41e2f0805cd2cd4061ba80ee65bb0a0d200345472d428e4bb9c22bdde0e5ebdc",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/runs/qwen3-14b-dev8-v2/models/tsg_tv_norm",
+      "shards": {
+        "model-00001-of-00032.safetensors": {
+          "bytes": 3111649408,
+          "mtime_ns": 1794281962917288810
+        },
+        "model-00002-of-00032.safetensors": {
+          "bytes": 3111649416,
+          "mtime_ns": 1794281978132644356
+        },
+        "model-00003-of-00032.safetensors": {
+          "bytes": 1677785560,
+          "mtime_ns": 1794281987927750718
+        },
+        "model-00004-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794281995966041447
+        },
+        "model-00005-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794282005197441860
+        },
+        "model-00006-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794282013171701405
+        },
+        "model-00007-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282021493153080
+        },
+        "model-00008-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794282030467782597
+        },
+        "model-00009-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794282038447376812
+        },
+        "model-00010-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282046502237191
+        },
+        "model-00011-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794282055479926480
+        },
+        "model-00012-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794282063646951959
+        },
+        "model-00013-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282071749813652
+        },
+        "model-00014-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794282080817846454
+        },
+        "model-00015-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794282088757622437
+        },
+        "model-00016-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282096675592984
+        },
+        "model-00017-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794282105635176927
+        },
+        "model-00018-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794282113798988525
+        },
+        "model-00019-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282121737978799
+        },
+        "model-00020-of-00032.safetensors": {
+          "bytes": 1929466112,
+          "mtime_ns": 1794282130466905193
+        },
+        "model-00021-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794282138438419758
+        },
+        "model-00022-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282146223936351
+        },
+        "model-00023-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794282155431430582
+        },
+        "model-00024-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794282163816522263
+        },
+        "model-00025-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282171911188430
+        },
+        "model-00026-of-00032.safetensors": {
+          "bytes": 1929466120,
+          "mtime_ns": 1794282180884119701
+        },
+        "model-00027-of-00032.safetensors": {
+          "bytes": 1677764992,
+          "mtime_ns": 1794282189125220565
+        },
+        "model-00028-of-00032.safetensors": {
+          "bytes": 1677764976,
+          "mtime_ns": 1794282196970860779
+        },
+        "model-00029-of-00032.safetensors": {
+          "bytes": 1929466104,
+          "mtime_ns": 1794282206192078249
+        },
+        "model-00030-of-00032.safetensors": {
+          "bytes": 1677764984,
+          "mtime_ns": 1794282214229158314
+        },
+        "model-00031-of-00032.safetensors": {
+          "bytes": 1677764968,
+          "mtime_ns": 1794282222477784505
+        },
+        "model-00032-of-00032.safetensors": {
+          "bytes": 1929466080,
+          "mtime_ns": 1794282231835833512
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    }
+  },
+  "models": {
+    "bcm_linear_nm": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/bcm_linear_nm",
+    "bcm_relative_nm": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/bcm_relative_nm",
+    "ck280": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-280",
+    "drr_nm": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/drr_nm",
+    "qis_nm": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r2/models/qis_nm",
+    "tsg_tv": "/mnt/infini/zym-tmp/merge/runs/qwen3-14b-dev8-v2/models/tsg_tv",
+    "tsg_tv_norm": "/mnt/infini/zym-tmp/merge/runs/qwen3-14b-dev8-v2/models/tsg_tv_norm"
+  },
+  "order": [
+    "tsg_tv",
+    "ck280",
+    "tsg_tv_norm",
+    "bcm_linear_nm",
+    "qis_nm",
+    "drr_nm",
+    "bcm_relative_nm"
+  ],
+  "recipes_sha256": "374e71614516be752cddca384f5d4f4088fe12f82c572d1ef9c403e2ba6c9dee",
+  "samples": 8,
+  "seed": 20261112,
+  "service_log": "/mnt/infini/zym-tmp/merge/appworld-service.log",
+  "split": "dev",
+  "tasks": 57
+}

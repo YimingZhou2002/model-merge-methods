@@ -1,0 +1,236 @@
+{
+  "code_sha256": {
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/appworld_checkpoint_eval/rollout_appworld.sh": "e230ac9618f726a5b19b6576c7311d079dfe08bab1fae1e74678f314e0015ebd",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/appworld_checkpoint_eval/runtime_manifest.json": "f843a70ffc6ea3dfc7dc148acabb630fb82bd53f35d77af0d549b8c30d38fe79",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/config.json": "343af115f2d72300a3c77ee762b9de7ebc88449e5b1c2cc74d28da2d6116d118",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/core.py": "dd1ea921e1f1d5e363f4d04c05dd44351bc6bb28d8e76b8c2afbbc7e337279a9",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/doctor.py": "cbdad4c7f45dba9dc13e4f60be29bd0be37ef0e149fec44861f31fff7c8e82ea",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/merge.py": "ae6343d41d9459b3cc168ad4bd6cae46ee5bfe54521b561c7aa945124f415d00",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/prepare_assets.py": "2e58776de73759d9578170fd9af60dde0ff095c9e5e86568bb06863ca18da641",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/checkpoint_merge_14b/study.py": "29da3e5f8bf2969485f4534f569e0bc21fd289b6fd390aee1658d41a5849d629",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/model_merge/weighted_merge.py": "a15f360d6ee39ee1e1b9bd9b4ee25deb6ad3bfd5213a137d6df3ac546d17b117",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/PLAN.md": "a4795e2ddeb3152afd43bbc55ae9a6521dde47112107698beba6fabe8dd4f594",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/__init__.py": "11de276ee9f49f0a5703adcde1821269ce8b186ec657b336c60c04028c737330",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/audit_exports.py": "4b957ef25a0e241d8ae5e538e12c708c3bc0ab46f617c021ea42f7df459ee827",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/methods.py": "764acdf1d5ec7a9b06d50e766e48817ed7ee2909bee7a4b3148a57491d50ef39",
+    "/mnt/infini/zym-tmp/merge/agent_merge/research/temporal_merge_search14b/run.py": "421ecf4a2a364e12c409afd81fbed0d7181efd1c5efea5bb3817c26be3f79a60"
+  },
+  "config": {
+    "anchor": 300,
+    "appworld_python": "/mnt/infini/zym-tmp/merge/envs/appworld/bin/python",
+    "appworld_repo": "/mnt/infini/zym-tmp/merge/runtime/appworld",
+    "attention_backend": "TRITON_ATTN",
+    "base_model": "/mnt/infini/zym-tmp/merge/base-model/Qwen3-14B",
+    "bootstrap_samples": 20000,
+    "checkpoints": [
+      230,
+      240,
+      250,
+      260,
+      270,
+      280,
+      290,
+      300
+    ],
+    "devices": "0,1,2,3,4,5,6,7",
+    "dtype": "float32",
+    "env_url": "http://127.0.0.1:18129",
+    "eval_python": "/mnt/infini/zym-tmp/merge/envs/eval/bin/python",
+    "gpu_memory_utilization": 0.85,
+    "max_num_batched_tokens": 8192,
+    "merge_arms": [
+      "mmr_ties",
+      "linear",
+      "tsg_tv",
+      "tsg_tv_norm"
+    ],
+    "mmr": {
+      "k": 5,
+      "lambda": 0.7,
+      "tau": 0.02
+    },
+    "pool": "/mnt/infini/zym-tmp/merge/model-pool",
+    "ray_namespace": 300,
+    "run_root": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r1",
+    "samples": 8,
+    "seed": 20261110,
+    "source": "/mnt/infini/zym-tmp/merge/runtime/source",
+    "study": "temporal-search14b-r1",
+    "tasks": 57,
+    "temperature": 0.9,
+    "tp": 1
+  },
+  "historical_commit": "45bb1210b33abcae2bece92731393c1e1269455a",
+  "plan_sha256": "a4795e2ddeb3152afd43bbc55ae9a6521dde47112107698beba6fabe8dd4f594",
+  "recipes_sha256": "7cb1bd4a27ca864d428c93cefec857b97a50608be06df61285e174a92d807002",
+  "source_identities": {
+    "230": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-230",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794191479181263770
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794189383068274549
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "240": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-240",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794191345260373342
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794189388952433957
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "250": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-250",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794192159134427600
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794190373265365378
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "260": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-260",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794192326148836737
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794191460158163527
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "270": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-270",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794193449716987279
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794191699097778343
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "280": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-280",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794193429319248468
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794192324132034619
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "290": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-290",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794194010061291533
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794192585247562293
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    },
+    "300": {
+      "config_sha256": "af55dea7ecdc5b0dd0df789919d91e8b3267eea98deadcaf17fed557cd818e2e",
+      "hash_scope": "config/tokenizer SHA256 and shard size/mtime; not full source tensor hashing",
+      "path": "/mnt/infini/zym-tmp/merge/model-pool/checkpoint-300",
+      "shards": {
+        "model-00001-of-00002.safetensors": {
+          "bytes": 49963541168,
+          "mtime_ns": 1794193624037409707
+        },
+        "model-00002-of-00002.safetensors": {
+          "bytes": 9109739112,
+          "mtime_ns": 1794193598518098560
+        }
+      },
+      "tensor_count": 443,
+      "tokenizer_sha256": {
+        "chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+        "tokenizer_config.json": "1cc816812993bff176eb4f7495433b736f06fba9b6e7b05cac7b4a1780650c95"
+      }
+    }
+  }
+}

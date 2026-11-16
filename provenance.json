@@ -1,0 +1,14 @@
+{
+  "repository": "https://github.com/YimingZhou2002/model-merge-methods",
+  "author": "yimingzhou2002",
+  "upstream_repository": "https://github.com/junjie-meng/agent_merge",
+  "base_branch": "main",
+  "base_commit": "0c1a5dd968bc6f577fdd52847982830a4ce86f5b",
+  "experiment_implementation_branch": "experiment/qwen3-14b-mmr-tsg",
+  "experiment_implementation_commit": "7247591",
+  "notes": [
+    "The streaming safetensors merge engine was verified byte-for-byte against the main-branch source.",
+    "MMR/TSG and BCM operator/evaluation code is included from the completed 14B experiment implementation because it was not present in the local main branch at the time this reproduction package was prepared.",
+    "Large model weights, AppWorld data, and local Python environments are intentionally excluded."
+  ]
+}

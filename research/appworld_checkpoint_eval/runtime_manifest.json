@@ -1,0 +1,516 @@
+{
+  "upstream_repo": "https://github.com/modelscope/AgentEvolver",
+  "upstream_commit": "a5a8db8689d6493b028107dcb4c27415441581dc",
+  "source_manifest_sha256": "c2852dc7101fecc779ca7c174d50ab6584b8d85711958263c4c1c900eeb34c64",
+  "files": [
+    {
+      "path": "agentevolver/__init__.py",
+      "sha256": "d964c6f754239faa85fcf16db1eb67270e538ccdbcaf86d9648fcfdd2e3ecdb8"
+    },
+    {
+      "path": "agentevolver/client/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/client/em_client.py",
+      "sha256": "e680a466ade96129885d199e4f1a54d410731a0393338083463c03156c128c15"
+    },
+    {
+      "path": "agentevolver/client/embedding_client.py",
+      "sha256": "2879dafbddde4c2abbee18ad567fb687964f8b3aa69fb211c5f86f2f6fc4e830"
+    },
+    {
+      "path": "agentevolver/client/env_client.py",
+      "sha256": "bd80260c9c3c0b3aafc08bf68e4b6ecb879d2fe1661be2ae5f283d775d9e029d"
+    },
+    {
+      "path": "agentevolver/client/llm_client.py",
+      "sha256": "cd3ceaa8f14f1d30c1de1f4e7afc299c97ba13d589c1a3ef0a1a20a767f40669"
+    },
+    {
+      "path": "agentevolver/enumeration/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/enumeration/http_enum.py",
+      "sha256": "d626e0cdb72ba9786c6542ad9a944c5a6dad0eab22ce2c1c585140d97a973763"
+    },
+    {
+      "path": "agentevolver/enumeration/role.py",
+      "sha256": "756e9013b5d75c97096bd303806301b300ddcb20b7a23888b09e29f4b1919169"
+    },
+    {
+      "path": "agentevolver/main_ppo.py",
+      "sha256": "29418f621a9285b1d0dcf6f3b095ca5fde49711a3c9917103fd1f2f6104e806b"
+    },
+    {
+      "path": "agentevolver/module/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/adv_processor/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/adv_processor/adca_grpo.py",
+      "sha256": "4fa58b58550273d6ed127d5880e5468329e697ac9033b229d19504c16d158c9f"
+    },
+    {
+      "path": "agentevolver/module/adv_processor/adca_grpo_pipeline.py",
+      "sha256": "00cfe496c8a0486e21dd19ce4515a61402ee7a35a63893c17c31d4ed768b559a"
+    },
+    {
+      "path": "agentevolver/module/adv_processor/candidate_prompt.py",
+      "sha256": "b9d2dc10cc41ab60662a4cc67e5f98e4bda49f99bbd9973d9f594f2832f3160f"
+    },
+    {
+      "path": "agentevolver/module/adv_processor/prompt.py",
+      "sha256": "0ed62ff05831a2183cd7975e2eaf0bfa7ce6581657c34483e2a4458709a74348"
+    },
+    {
+      "path": "agentevolver/module/adv_processor/semantic_attribution.py",
+      "sha256": "05b7b9809a5f4677d3f2c44af819b47637188f2a8da7d1661454a70d6936debe"
+    },
+    {
+      "path": "agentevolver/module/agent_flow/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/agent_flow/agent_flow.py",
+      "sha256": "9fef77ec3f7b7b5afc26054a9b35dac7bf617378d1e1bd58bb3c37e28ad5bef2"
+    },
+    {
+      "path": "agentevolver/module/agent_flow/base_agent_flow.py",
+      "sha256": "bd7880945c4375f1f3e694b5267c6d1dc36c00f916f0d577b38839bf03872480"
+    },
+    {
+      "path": "agentevolver/module/agent_flow/reward_calculator.py",
+      "sha256": "b7c553dd1cf9f0e6eedb0b0eb29b705df6e0afd9e8f5def2b97f6c1d97326ee3"
+    },
+    {
+      "path": "agentevolver/module/context_manager/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/context_manager/cmt_base.py",
+      "sha256": "79df15860d50ca4fe8b8a00de4dabf3c37255ffdacf0da5be3fd208a28ca5f72"
+    },
+    {
+      "path": "agentevolver/module/context_manager/cmt_context_clip.py",
+      "sha256": "445cedaf491f4cd07051916b2424cc9316f665ca4f5e60de88c96ac772805270"
+    },
+    {
+      "path": "agentevolver/module/context_manager/cmt_linear.py",
+      "sha256": "d068237139c6265eeab8643446b57ba7c7ab9bd264b3b4ce114ef74a7a844ffb"
+    },
+    {
+      "path": "agentevolver/module/context_manager/cmt_linear_think.py",
+      "sha256": "1b024b9b87cb0c8e5e43f8d834c273c7bb512b129e2a53ab20d6eb14378ce944"
+    },
+    {
+      "path": "agentevolver/module/context_manager/cmt_linear_tokens.py",
+      "sha256": "df2517204675835149d83f3c800a9d3a47f177fb840df6f9c38341380d48460a"
+    },
+    {
+      "path": "agentevolver/module/context_manager/cmt_memory.py",
+      "sha256": "2c9b280ec49d2192140c32d945c26d6d7b5092b32eec45ac1e0055224f686ca6"
+    },
+    {
+      "path": "agentevolver/module/context_manager/cmt_phantom_hint.py",
+      "sha256": "06e767153bc105a0dfe2781122b87765551f85c2d905399f520f79ccd17bc352"
+    },
+    {
+      "path": "agentevolver/module/env_manager/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/env_manager/env_manager.py",
+      "sha256": "3e5188ce2d673abfd7318c7b23916e5914219f9213c97b2a0b8f4431e6dc2b9c"
+    },
+    {
+      "path": "agentevolver/module/env_manager/env_worker.py",
+      "sha256": "6cdd472f51a903338bcc33164276827b94321b55f6b2574ac67e84d67dd81434"
+    },
+    {
+      "path": "agentevolver/module/exp_manager/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/exp_manager/exp_manager.py",
+      "sha256": "4701770a22a8c390516a5f89e5e1c1b1eca3c0fb5f731438855471382dfab02e"
+    },
+    {
+      "path": "agentevolver/module/exp_manager/het_actor.py",
+      "sha256": "220910538bbfa597d8688982d7f72ff4a4d40944dfa36f7c7a0baeba7caf3069"
+    },
+    {
+      "path": "agentevolver/module/exp_manager/het_core_algos.py",
+      "sha256": "ad47daa99d57b551dbd66a6fd7b5c92818a0d1397034ef240803edf438d45693"
+    },
+    {
+      "path": "agentevolver/module/exp_manager/het_fsdp_worker.py",
+      "sha256": "7f776139e5029f2384e463a81fe7b7943e5bea96309e25e1a02e8b5b54516562"
+    },
+    {
+      "path": "agentevolver/module/task_manager/__init__.py",
+      "sha256": "73246d294cefcd21244f78cbeaaa48078b584671293cfe91c88e2ca9a233c460"
+    },
+    {
+      "path": "agentevolver/module/task_manager/__main__.py",
+      "sha256": "06e09af6ce938d83bc65686f0caf19ca68b37ca2055df2e7c1c57e898c1a9ffc"
+    },
+    {
+      "path": "agentevolver/module/task_manager/adapter.py",
+      "sha256": "43535d555d9ef6f2ac62a6c9fe036edbba04c35b9b440ba79b820923b2d26b25"
+    },
+    {
+      "path": "agentevolver/module/task_manager/agent_flow.py",
+      "sha256": "beafe8e30f8a1adffd785e04fd59dd3398f209eac481c7424f4c9f4ace1ab1b3"
+    },
+    {
+      "path": "agentevolver/module/task_manager/base.py",
+      "sha256": "745be27339156dc20cbfd2296b306548a3c13b2693580eb4c606095a167bbb31"
+    },
+    {
+      "path": "agentevolver/module/task_manager/data_mixture.py",
+      "sha256": "838a52f02c86fe3a5aa761c830e96546ccb6a86cfe35a5a19a139ffe9cf458b9"
+    },
+    {
+      "path": "agentevolver/module/task_manager/datasets.py",
+      "sha256": "356cad0b351d038e7249d32d96d520d0655132e95b7e7b71c140a05f800fd16a"
+    },
+    {
+      "path": "agentevolver/module/task_manager/env_profiles.py",
+      "sha256": "21f461e778ddc66891be5ccf1dbce683cf879757f1d38a9ca7e78f5f3b56642e"
+    },
+    {
+      "path": "agentevolver/module/task_manager/filters/__init__.py",
+      "sha256": "2da7613278258784791d92fe0ac86836f8e7074e618df8570cdfee88cd5e81ad"
+    },
+    {
+      "path": "agentevolver/module/task_manager/filters/filters.py",
+      "sha256": "798c7071cf70f33a7ab568c8e3118b328ce5b06dac178679c0a7d05a7cda206a"
+    },
+    {
+      "path": "agentevolver/module/task_manager/filters/llm_filter.py",
+      "sha256": "db5c252956e15e3bd63c18405d988f1d4fcc5cdb8792551d80b4221e0def337a"
+    },
+    {
+      "path": "agentevolver/module/task_manager/prelude_profiles/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/task_manager/prelude_profiles/appworld.py",
+      "sha256": "7cc05a30a90a40f29791dffe68607b9e679c8929d044e0c21f6b5d5fff3cf943"
+    },
+    {
+      "path": "agentevolver/module/task_manager/prelude_profiles/bfcl.py",
+      "sha256": "4229089d8ee1e89f672b85d3342fd6bfe1cd7eb0e45fb0aa95526f2b6b6bf5b3"
+    },
+    {
+      "path": "agentevolver/module/task_manager/prelude_profiles/webshop.py",
+      "sha256": "0832b313d93b70679cf38a7d862cebf7b6cb71e6628ddeedeeb4bf10c6e904e1"
+    },
+    {
+      "path": "agentevolver/module/task_manager/rewards/__init__.py",
+      "sha256": "aab5010d7404e743bfc8521f4a7fb5d9a13be0d3c619e9a5c9cc0083d447581a"
+    },
+    {
+      "path": "agentevolver/module/task_manager/rewards/avg_judge.py",
+      "sha256": "5a97b86497aaa653da6290a6e500a2c15960e948975b374bc0b55114e39ec95e"
+    },
+    {
+      "path": "agentevolver/module/task_manager/rewards/binary_judge.py",
+      "sha256": "7734801f2afec9ecd8a79778426d455775cb3fbbdd5c5e828c21894eb2516d5d"
+    },
+    {
+      "path": "agentevolver/module/task_manager/rewards/binary_judge_gt.py",
+      "sha256": "7ac5d6b09c3c4f8f813cad07f6f4188c94d94dfeca72bdd46daab5938af74023"
+    },
+    {
+      "path": "agentevolver/module/task_manager/rewards/env_grader.py",
+      "sha256": "5f7ac07d42ae7a32bfa334d7319ce9838db2b8c27e332a592e52e6c7deb8437a"
+    },
+    {
+      "path": "agentevolver/module/task_manager/rewards/judge_with_gt.py",
+      "sha256": "fc751aaefe636d9ed7565f865a68ae8177b92e7e86922a65d192dd9e261a9dc2"
+    },
+    {
+      "path": "agentevolver/module/task_manager/rewards/reward.py",
+      "sha256": "f11a7de9c8164575a9f3b7a7f0ad3529e24dc52cf4cc8538b0483966a173670b"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/__init__.py",
+      "sha256": "cddd50749e943546462aeccbb69ee83e92b7d400261734ce1b529ab4f3513cd6"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/common/__init__.py",
+      "sha256": "778206d0ec545e3d877df7a9cd07188b11e565ebaeb8330015ad3d1ffe8bb665"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/common/prompts/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/common/prompts/prompt_explore.py",
+      "sha256": "c6d99e4e7409e762a5f38fe1342fa9a54a4cbb8e075c4f0489deb6c0c2abc0d3"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/common/prompts/prompt_extract_refsol.py",
+      "sha256": "63f4d25dd4bfb54eade9e3842b0ac7ec4dc68d54e0e48eb7077a1b5bd1e12e34"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/common/prompts/prompt_summarize.py",
+      "sha256": "87ccdca749502b6e7a02e4c4ac36b68fbcef60895f94d75b6353afb9b819c3ed"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/deduplication/__init__.py",
+      "sha256": "e79cbf3814702e801fdc6105a9f1e880f9d9fd4607dc3dbe255f897fe644c94a"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/deduplication/controlled_agent_flow.py",
+      "sha256": "79258ba75c98ccbc4612f355fe83c8bfb4a88a7e1c3d6cf02625d69b7c0c6a24"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/deduplication/embedding.py",
+      "sha256": "1f20f7dc3923fe7dc8a2f23d45132ce9765a22957a6458a38ef64ceaaaf4b68a"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/deduplication/prompts/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/deduplication/prompts/prompt_state_summary.py",
+      "sha256": "6b90bc79a9817cd6b3b146b1fac76d0f25b88bacd7d147e4608282e47b4b75ce"
+    },
+    {
+      "path": "agentevolver/module/task_manager/strategies/random/__init__.py",
+      "sha256": "f745445334612ec0d78b7d01ead6397aef69b5c5b1e6a2f553b2d2621b1c73fe"
+    },
+    {
+      "path": "agentevolver/module/task_manager/task_manager.py",
+      "sha256": "9819387f6edb5fd94ef62497e4329d2e72df92ba74087c01c828798b6d16c9b4"
+    },
+    {
+      "path": "agentevolver/module/trainer/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/module/trainer/ae_async_llm_server_manager.py",
+      "sha256": "018838d30e3d2042fe848077a500948c032319a09871d4504edf9d53c882cc7d"
+    },
+    {
+      "path": "agentevolver/module/trainer/ae_ray_trainer.py",
+      "sha256": "04a8e93a6cc5fcb9cc6ae0924fce92b8d2c5e20a4bd4d26940714120fa46d9be"
+    },
+    {
+      "path": "agentevolver/module/trainer/simple_completion_callback.py",
+      "sha256": "2d4852cebbf60276255f2390c3cb31a363f53246028590ebd06258485daba001"
+    },
+    {
+      "path": "agentevolver/schema/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/schema/task.py",
+      "sha256": "26701fde95587bc6467e077eaa12cdf6cbb0a98ae26e55c8e3630cc0ef05d0eb"
+    },
+    {
+      "path": "agentevolver/schema/trajectory.py",
+      "sha256": "cacec828467814d147af0e79f1f69b84ad59e516ccb7c4881beeb6af14c95699"
+    },
+    {
+      "path": "agentevolver/utils/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agentevolver/utils/agentscope_utils.py",
+      "sha256": "154034327e19663b5f192e938f57d49f3fcd3addab869354927ef11745428dba"
+    },
+    {
+      "path": "agentevolver/utils/analysis_time_cost.py",
+      "sha256": "58b96c8614c2922a48f37cf865fb4b2878cfcb8bc1b2a557faa76723e4800d1a"
+    },
+    {
+      "path": "agentevolver/utils/async_http_client.py",
+      "sha256": "a39d1ee41b9437336e149a15887128474135573bccda66286c939cd82d622bf4"
+    },
+    {
+      "path": "agentevolver/utils/compute_madness.py",
+      "sha256": "b5d3037cf58233997e77806b7021604959cc34f591d23066a7ba9bcf487d858f"
+    },
+    {
+      "path": "agentevolver/utils/daemon.py",
+      "sha256": "68b8191a975eadf96d0624e64897b680524912e6e75009fb0bd3979914c183da"
+    },
+    {
+      "path": "agentevolver/utils/http_client.py",
+      "sha256": "d02bef6f6fc4405222a2f87d6ce732f7e9c99e5e1d0ff2896d56ee250747865b"
+    },
+    {
+      "path": "agentevolver/utils/metric_utils.py",
+      "sha256": "a437d3359cf7a91842f3d54be25ca4cb339323aefcc4d46446581770e348f1ba"
+    },
+    {
+      "path": "agentevolver/utils/n_gram.py",
+      "sha256": "2727b14ea4206f5ccf726e043a4e9d3cb56b7353cb488c17a2c6a950c6e0af75"
+    },
+    {
+      "path": "agentevolver/utils/pty.py",
+      "sha256": "f7caef8f251d6a1a2a7ca6b84d2135a04b75629df1c26b6787834391c8e08099"
+    },
+    {
+      "path": "agentevolver/utils/step_parser.py",
+      "sha256": "1a8ed8e506269cafe7155c1f6119db3478822712ea351d428508d7b175e4f4fe"
+    },
+    {
+      "path": "agentevolver/utils/thinking.py",
+      "sha256": "e98dd53d6a4afad96556345637d174cd4ecd6233614770bbb5ee1a58e7673a4f"
+    },
+    {
+      "path": "agentevolver/utils/tracking.py",
+      "sha256": "d849e794b04549294d18289dc4cafcb816fd990bb38c3e2445bf332d7eeb0971"
+    },
+    {
+      "path": "agentevolver/utils/utils.py",
+      "sha256": "4e51d3dc5de96280dc2c8dccdd51d7b5edb8aad3924ec91faa269c475a737cea"
+    },
+    {
+      "path": "agentevolver/utils/verl09_compat.py",
+      "sha256": "30e4756c6daf3e9951febc695086ed736afe41d5dcc05c99a63265d2a57dc826"
+    },
+    {
+      "path": "agentevolver/utils/vsdb.py",
+      "sha256": "f6c0acc4a7583936a848ccbf7b118ffbcc700bb39758c6175b09d1065ec97e1f"
+    },
+    {
+      "path": "config/agentevolver.yaml",
+      "sha256": "1fbf352d2964c5f13097ea54ae1d65ebe60b9f0f6e7a3c00e8f2bf6cf3f275cd"
+    },
+    {
+      "path": "config/runtime_env.yaml",
+      "sha256": "0ee662373b8662db9ab90f7715ae9476d68f0f57c150dfe824bb3f4f9f757379"
+    },
+    {
+      "path": "config/script_config.yaml",
+      "sha256": "f92525654eaa1f58a85ba15b7171bbab1494fffcb6c8326e478c9bb7acaa51ff"
+    },
+    {
+      "path": "env_service/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "env_service/base.py",
+      "sha256": "8943ec7c0f288860d1dc131553baa2b2f3be513f07b42c7bf1ac96ebb0d0d164"
+    },
+    {
+      "path": "env_service/env_client.py",
+      "sha256": "8f8badd25635438d153d6e312e1ed15363cd57b8b59a83470b871fb332c2faf3"
+    },
+    {
+      "path": "env_service/env_service.py",
+      "sha256": "baad5f687f667fa8503ab771336827bbeb62cac56d41097337118d5f87c4f4d1"
+    },
+    {
+      "path": "env_service/environments/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "env_service/environments/appworld/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "env_service/environments/appworld/appworld_env.py",
+      "sha256": "a6de65231f5ea82f35f15b6d25e7c9a569e6198ac2bf9d19bf3d053b6926b11d"
+    },
+    {
+      "path": "env_service/environments/appworld/requirements.txt",
+      "sha256": "1eebe5f1ec3b83650cb16e410722c06a9975d461143a3c0148830aca68b4f05d"
+    },
+    {
+      "path": "env_service/environments/appworld/setup.sh",
+      "sha256": "0a2fd49ece85dfabda0ebd64a27f9705847df066038dfad828be6131ec0dfc63"
+    },
+    {
+      "path": "env_service/environments/bfcl/bfcl_dataprocess.py",
+      "sha256": "f2db3c54403845580f0b9dc216275e44f0a623b274456082d70ebd51463e4c4d"
+    },
+    {
+      "path": "env_service/environments/bfcl/bfcl_env.py",
+      "sha256": "a9a722698ed7af0fc2b106996f41ef849f9d57f31a4732ea4e37028e48b3e4c1"
+    },
+    {
+      "path": "env_service/environments/bfcl/env_handler.py",
+      "sha256": "7eb07e2baae86ce9e39a841a807f4757244da088eda6d4b307d8ddfe15ee6efa"
+    },
+    {
+      "path": "env_service/environments/bfcl/requirements.txt",
+      "sha256": "874a0d94a7b8fdb27fe3fa6838d983571f3958f9386c60d7a4d1843f70d342d3"
+    },
+    {
+      "path": "env_service/environments/bfcl/setup.sh",
+      "sha256": "d2bbd9df6253276a0008135335189a57f0375da8fbbbc6db1ff243074058c7d9"
+    },
+    {
+      "path": "env_service/environments/openworld/mcp_utils.py",
+      "sha256": "7d215e96f4ba529a9618872460863ebfa29e176dbabd83e7f661ecd415903701"
+    },
+    {
+      "path": "env_service/environments/openworld/openworld_env.py",
+      "sha256": "ee8b01e4c0320ce2dbf2536e4491431a539694c3f7daeba8c6abbf2bf380d14f"
+    },
+    {
+      "path": "env_service/environments/openworld/requirements.txt",
+      "sha256": "6cb8cceb1fe5f3624666d4826c53e3aec94b67d4e46c932493b5c386b9faad29"
+    },
+    {
+      "path": "env_service/environments/openworld/setup.sh",
+      "sha256": "7f7fe560ecffe0786cc14f0d29ca97b1422950eff8bc863f27a787ef6f8a08bf"
+    },
+    {
+      "path": "env_service/environments/openworld/tool_call_extract.py",
+      "sha256": "30b4aea6ee31851c4242303b4efc263f5e436ab7514e126acd2eda93f6d49adb"
+    },
+    {
+      "path": "env_service/launch_script/appworld.sh",
+      "sha256": "2be41b5a41fbf3e7dd0d8b8cea73616332b957d6883cd678271c5641e100e301"
+    },
+    {
+      "path": "env_service/launch_script/bfcl.sh",
+      "sha256": "b4da925ba910cfb4ea3559f052c0fb71fe16d535e8170621b1324b80656dd25b"
+    },
+    {
+      "path": "env_service/launch_script/openworld.sh",
+      "sha256": "a2a7a1a030049c395bb0cbe38987f2d8330fecbc752e70c81e5a371b25f8a561"
+    },
+    {
+      "path": "env_service/registry.py",
+      "sha256": "e9f4cc66f25b6a4844aa468eeb52bec087d7eae6aeee0e2714feb76d0ee388d2"
+    },
+    {
+      "path": "env_service/test_script/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "env_service/test_script/test_appworld.py",
+      "sha256": "dce2a92db954bcc51c2dea56f0a7b12baebceda9ed88d80f3f38ef045394ab3d"
+    },
+    {
+      "path": "env_service/test_script/test_bfcl.py",
+      "sha256": "5f3f19bc9b71ae661fde028867b2bd314d868041fa17602bdba915e00450f9a4"
+    },
+    {
+      "path": "env_service/test_script/test_openworld.py",
+      "sha256": "6f8731c68b26819cae1e616ac660b3862b8def55232eb7bf5ced501f17cf1e80"
+    },
+    {
+      "path": "env_service/trajectory.py",
+      "sha256": "576bbf22cac6bed4537832095ab66727d493811d5ec10c295aa46a11c6721220"
+    },
+    {
+      "path": "tests/test_cot_consistency.py",
+      "sha256": "5f88a9e7eba6a535de2003a95bc33cafbb1278580e4b4b2252c3646aaaa8df55"
+    }
+  ],
+  "description": "Pinned runtime source used for the original-base Qwen3 300-step AppWorld runs; external Python packages and AppWorld data are recorded separately."
+}

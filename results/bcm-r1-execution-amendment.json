@@ -1,0 +1,56 @@
+{
+  "applies_to": "All eight new round-1 cells including concurrent TSG-TV; original historical study untouched",
+  "completed_valid_cells_before_amendment": 0,
+  "execution_config": {
+    "anchor": 300,
+    "appworld_python": "/mnt/infini/zym-tmp/merge/envs/appworld/bin/python",
+    "appworld_repo": "/mnt/infini/zym-tmp/merge/runtime/appworld",
+    "attention_backend": "TRITON_ATTN",
+    "base_model": "/mnt/infini/zym-tmp/merge/base-model/Qwen3-14B",
+    "bootstrap_samples": 20000,
+    "checkpoints": [
+      230,
+      240,
+      250,
+      260,
+      270,
+      280,
+      290,
+      300
+    ],
+    "devices": "0,1,2,3,4,5,6,7",
+    "dtype": "float32",
+    "env_url": "http://127.0.0.1:18129",
+    "eval_python": "/mnt/infini/zym-tmp/merge/envs/eval/bin/python",
+    "gpu_memory_utilization": 0.8,
+    "max_num_batched_tokens": 4096,
+    "merge_arms": [
+      "mmr_ties",
+      "linear",
+      "tsg_tv",
+      "tsg_tv_norm"
+    ],
+    "mmr": {
+      "k": 5,
+      "lambda": 0.7,
+      "tau": 0.02
+    },
+    "pool": "/mnt/infini/zym-tmp/merge/model-pool",
+    "ray_namespace": 310,
+    "run_root": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r1",
+    "samples": 8,
+    "seed": 20261110,
+    "source": "/mnt/infini/zym-tmp/merge/runtime/source",
+    "study": "temporal-search14b-r1",
+    "tasks": 57,
+    "temperature": 0.9,
+    "tp": 1
+  },
+  "failed_attempt": "/mnt/infini/zym-tmp/merge/runs/temporal-search14b-r1/failed-attempts/tsg-tv-prefill-oom-20261110T1305Z",
+  "frozen_at": "2026-11-10T13:05:49.773586+00:00",
+  "independent_auditor_sha256": "addbd05db88aa680dbd932c0124fd2d9600fb706c89f4d71a86df34053b89187",
+  "original_inputs_sha256": "0abde2ca4dedffd8ccbd993054dcb61cbe3a40d77bd312c57b676fd1ac6156ff",
+  "reason": "Actual prefill CUDA OOM; 1.06 GiB allocation with only 728 MiB free, alongside 12.93 GiB actor memory. Subsequent HTTP 500 retries are invalid.",
+  "recovery_runner_sha256": "5e8465de15e311cde9527cb192ec6d70cde6893f112134f193275a28c33b54b9",
+  "unchanged": "Source/merge weights and recipes, task set, samples, FP32, temperature, context/prompt/response/action budgets, seed and attention backend"
+}
